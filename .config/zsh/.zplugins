@@ -5,9 +5,6 @@ ${ZDOTDIR:-$HOME}/.zaliases
 getantidote/use-omz
 ohmyzsh/ohmyzsh path:lib
 
-# Functions
-mattmc3/zfunctions
-
 # OMZ Plugins
 ohmyzsh/ohmyzsh path:plugins/colored-man-pages
 ohmyzsh/ohmyzsh path:plugins/copybuffer
@@ -18,11 +15,6 @@ ohmyzsh/ohmyzsh path:plugins/eza
 ohmyzsh/ohmyzsh path:plugins/fancy-ctrl-z
 ohmyzsh/ohmyzsh path:plugins/fzf
 
-# Add macOS specific plugins
-ohmyzsh/ohmyzsh path:plugins/brew conditional:is-macos
-ohmyzsh/ohmyzsh path:plugins/gnu-utils conditional:is-macos
-ohmyzsh/ohmyzsh path:plugins/macos conditional:is-macos
-
 # Completion plugins
 aloxaf/fzf-tab
 zsh-users/zsh-completions path:src kind:fpath
@@ -30,7 +22,9 @@ zsh-users/zsh-completions path:src kind:fpath
 # Fish-like behavior
 zdharma-continuum/fast-syntax-highlighting
 zsh-users/zsh-autosuggestions
-zsh-users/zsh-history-substring-search
+
+# Atuin
+atuinsh/atuin
 
 # Conf.d
 mattmc3/zshrc.d

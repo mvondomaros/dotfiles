@@ -30,9 +30,6 @@ alias datestamp="date '+%Y-%m-%d'"
 alias fd='find . -type d -name'
 alias ff='find . -type f -name'
 
-# Set up common aliases.
-alias hist=history
-
 # Bare repositories.
 alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.local/dotfiles/bin:$PATH'
 
