@@ -13,10 +13,6 @@ fi
 GREP_EXCL=(.bzr CVS .git .hg .svn .idea .tox)
 alias grep="grep --color=auto --exclude-dir={\${(j:,:)GREP_EXCL}}"
 
-# GPG
-#export GNUPGHOME="${GNUPGHOME:-$XDG_DATA_HOME/gnupg}"
-#alias gpg="${aliases[gpg]:-gpg} --homedir \$GNUPGHOME"
-
 # Ls
 alias ll='ls -lh'
 alias la='ls -lAh'
@@ -32,7 +28,3 @@ alias ff='find . -type f -name'
 
 # Bare repositories.
 alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.local/dotfiles/bin:$PATH'
-
-# Load more specific zsh 'run-help' function.
-(( $+aliases[run-help] )) && unalias run-help && autoload -Uz run-help
-alias help=run-help
