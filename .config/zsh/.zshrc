@@ -5,14 +5,6 @@
 source $ZDOTDIR/.antidote/antidote.zsh
 antidote load $ZDOTDIR/.zplugins
 
-## Set up the path.
-#typeset -U path
-#path=(~/.local/bin $path)
-#
-## Source host-specific environment.
-#for file in ~/.profile.d/*.zsh; do
-#    source $file
-#done
 #
 ## Set the locale.
 #export LANG=en_US.UTF-8
@@ -39,10 +31,3 @@ antidote load $ZDOTDIR/.zplugins
 #HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=1
 #bindkey '^[[A' history-substring-search-up
 #bindkey '^[[B' history-substring-search-down
-#
-## Load antidote.
-#source ~/.antidote/antidote.zsh
-#antidote load ~/.zsh_plugins.txt
-#
-## Set up LSCOLORS
-#export LS_COLORS="$(vivid generate catppuccin-mocha)"
