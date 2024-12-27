@@ -2,7 +2,9 @@
 
 *
 
-# Add back items as needed.
+# Add/ignore files in the .config directory.
 
 !.config
 !.config/**
+.config/nvim/lazy-lock.json
+.config/nvim/lazyvim.json
