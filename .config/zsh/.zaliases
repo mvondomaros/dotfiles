@@ -34,7 +34,7 @@ alias ff='find . -type f -name'
 alias hist=history
 
 # Bare repositories.
-alias dotfiles="GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles"
+alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.local/dotfiles/bin:$PATH'
 
 # Load more specific zsh 'run-help' function.
 (( $+aliases[run-help] )) && unalias run-help && autoload -Uz run-help

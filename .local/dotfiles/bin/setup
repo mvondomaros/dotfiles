@@ -1,0 +1,24 @@
+#!/bin/sh
+
+source ~/.local/dotfiles/lib/helpers
+
+setup_macos() {
+    echo "Setting up MacOS."
+    defaults write -g ApplePressAndHoldEnabled -bool false
+    defaults write -g InitialKeyRepeat -int 10
+    defaults write -g KeyRepeat -int 1
+}
+
+setup_conda() {
+    echo "Setting up conda."
+    mkdir -p ~/.opt/miniconda3
+    is_linux && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/.opt/miniconda3/miniconda.sh
+    is_mac && curl -s https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/.opt/miniconda3/miniconda.sh
+    bash ~/.opt/miniconda3/miniconda.sh -b -u -p ~/.opt/miniconda3 >/dev/null
+    rm ~/.opt/miniconda3/miniconda.sh
+    cp misc/condarc ~/.condarc
+}
+
+# Run conditional setup tasks.
+in_path conda || setup_conda
+is_mac && setup_macos
