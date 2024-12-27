@@ -1,0 +1,14 @@
+# Ignore everything by default.
+
+*
+
+# Add back items as needed.
+
+## config directory
+
+!.config
+!.config/**
+
+## git
+
+!.gitignore
