@@ -1,0 +1,26 @@
+# OMZ
+getantidote/use-omz
+ohmyzsh/ohmyzsh path:lib
+
+# Make functions available
+mattmc3/zfunctions
+
+# OMZ Plugins
+ohmyzsh/ohmyzsh path:plugins/colored-man-pages
+ohmyzsh/ohmyzsh path:plugins/copybuffer
+ohmyzsh/ohmyzsh path:plugins/copyfile
+ohmyzsh/ohmyzsh path:plugins/copypath
+ohmyzsh/ohmyzsh path:plugins/extract
+ohmyzsh/ohmyzsh path:plugins/eza
+ohmyzsh/ohmyzsh path:plugins/fancy-ctrl-z
+ohmyzsh/ohmyzsh path:plugins/fzf
+ohmyzsh/ohmyzsh path:plugins/gnu-utils conditional:is-macos
+
+# Completion plugins
+aloxaf/fzf-tab
+zsh-users/zsh-completions path:src kind:fpath
+
+# Fish-like behavior
+zdharma-continuum/fast-syntax-highlighting
+zsh-users/zsh-autosuggestions
+zsh-users/zsh-history-substring-search

@@ -8,3 +8,6 @@
 !.config/**
 .config/nvim/lazy-lock.json
 .config/nvim/lazyvim.json
+.config/zsh/.antidote/
+.config/zsh/.zplugins.zsh
+.config/zsh/.zsh_history
