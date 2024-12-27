@@ -1,5 +1,5 @@
-# Aliases
-${ZDOTDIR:-$HOME}/.zaliases
+# Conf.d
+mattmc3/zshrc.d
 
 # OMZ
 getantidote/use-omz
@@ -15,6 +15,12 @@ ohmyzsh/ohmyzsh path:plugins/eza
 ohmyzsh/ohmyzsh path:plugins/fancy-ctrl-z
 ohmyzsh/ohmyzsh path:plugins/fzf
 
+# Aliases
+${ZDOTDIR:-$HOME}/.zaliases
+
+# Atuin
+atuinsh/atuin
+
 # Completion plugins
 aloxaf/fzf-tab
 zsh-users/zsh-completions path:src kind:fpath
@@ -22,9 +28,3 @@ zsh-users/zsh-completions path:src kind:fpath
 # Fish-like behavior
 zdharma-continuum/fast-syntax-highlighting
 zsh-users/zsh-autosuggestions
-
-# Atuin
-atuinsh/atuin
-
-# Conf.d
-mattmc3/zshrc.d
