@@ -1,5 +1,6 @@
 # Dotfiles
-Public dotfiles
+
+My public dotfiles.
 
 ## Setup
 ```bash
