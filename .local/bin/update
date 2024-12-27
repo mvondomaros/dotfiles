@@ -1,0 +1,45 @@
+#!/bin/sh
+
+in_path() {
+    command -v "$1" 2 >/dev/null >&1
+}
+
+# Homebrew
+echo "Updating brew ..."
+if in_path brew; then
+    brew update
+    brew upgrade
+    brew autoremove
+    brew cleanup
+fi >/dev/null
+
+# Antidote
+echo "Updating antidote ..."
+if in_path antidote; then
+    antidote update
+fi >/dev/null
+
+# Conda
+echo "Updating conda ..."
+if in_path conda; then
+    eval "$(~/.opt/miniconda3/bin/conda shell.bash hook)                    "
+    for env in base $(ls ~/.opt/miniconda3/envs); do
+        conda activate $env
+        conda update --all -y
+    done
+fi >/dev/null
+
+# Neovim
+echo "Updating neovim ..."
+if in_path nvim; then
+    nvim --headless '+Lazy! sync' '+qa'
+    nvim --headless 'lua require("Mason")' '+MasonUpdate' '+qa'
+    nvim --headless 'TSUpdate' '+qa'
+fi >/dev/null
+
+# Vim
+echo "Updating vim ..."
+if in_path vim; then
+    vim -es -u vimrc -i NONE -c "PlugUpdate" -c "qa"
+fi >/dev/null
+
