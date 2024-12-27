@@ -2,7 +2,7 @@
 getantidote/use-omz
 ohmyzsh/ohmyzsh path:lib
 
-# Make functions available
+# Functions
 mattmc3/zfunctions
 
 # OMZ Plugins
@@ -14,7 +14,14 @@ ohmyzsh/ohmyzsh path:plugins/extract
 ohmyzsh/ohmyzsh path:plugins/eza
 ohmyzsh/ohmyzsh path:plugins/fancy-ctrl-z
 ohmyzsh/ohmyzsh path:plugins/fzf
+
+# Add macOS specific plugins
+ohmyzsh/ohmyzsh path:plugins/brew conditional:is-macos
 ohmyzsh/ohmyzsh path:plugins/gnu-utils conditional:is-macos
+ohmyzsh/ohmyzsh path:plugins/macos conditional:is-macos
+
+# Aliases
+${ZDOTDIR:-$HOME}/.zaliases
 
 # Completion plugins
 aloxaf/fzf-tab
@@ -24,3 +31,6 @@ zsh-users/zsh-completions path:src kind:fpath
 zdharma-continuum/fast-syntax-highlighting
 zsh-users/zsh-autosuggestions
 zsh-users/zsh-history-substring-search
+
+# Conf.d
+mattmc3/zshrc.d
