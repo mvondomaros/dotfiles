@@ -7,4 +7,5 @@ My public dotfiles.
 ```bash
 git clone --bare git@github.com:mvondomaros/dotfiles $HOME/.dotfiles
 alias dotfiles='git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
+dotfiles checkout
 ```
