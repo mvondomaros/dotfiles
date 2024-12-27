@@ -1,0 +1,41 @@
+#!/bin/zsh
+
+# Mask built-ins with better defaults.
+alias mkdir="mkdir -p"
+alias rm="rm -I"
+if [[ "$OSTYPE" == darwin* ]]; then
+    alias ls="ls -G"
+else
+    alias ls="ls --group-directories-first --color=auto"
+fi
+
+# Grep
+GREP_EXCL=(.bzr CVS .git .hg .svn .idea .tox)
+alias grep="grep --color=auto --exclude-dir={\${(j:,:)GREP_EXCL}}"
+
+# GPG
+#export GNUPGHOME="${GNUPGHOME:-$XDG_DATA_HOME/gnupg}"
+#alias gpg="${aliases[gpg]:-gpg} --homedir \$GNUPGHOME"
+
+# Ls
+alias ll='ls -lh'
+alias la='ls -lAh'
+alias ldot='ls -ld .*'
+
+# Date
+alias timestamp="date '+%Y-%m-%d %H:%M:%S'"
+alias datestamp="date '+%Y-%m-%d'"
+
+# Find
+alias fd='find . -type d -name'
+alias ff='find . -type f -name'
+
+# Set up common aliases.
+alias hist=history
+
+# Bare repositories.
+alias dotfiles="GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles"
+
+# Load more specific zsh 'run-help' function.
+(( $+aliases[run-help] )) && unalias run-help && autoload -Uz run-help
+alias help=run-help

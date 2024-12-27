@@ -34,15 +34,6 @@ antidote load $ZDOTDIR/.zplugins
 #    export VISUAL=fleet
 #fi
 #
-# Set up common aliases.
-alias hist=history
-alias ll="ls -hl --color=auto"
-alias la="ll -A"
-alias rm="rm -I"
-
-# Set up the dotfiles alias.
-alias dotfiles="git --git-dir=$HOME/.dotfiles --work-tree=$HOME"
-
 ## Configure history-substring-search.
 #HISTORY_SUBSTRING_SEARCH_ENSURE_UNIQUE=1
 #bindkey '^[[A' history-substring-search-up
