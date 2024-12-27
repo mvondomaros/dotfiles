@@ -1,3 +1,7 @@
 # Ignore everything by default.
 
 *
+
+# Add back itmes as needed.
+
+!.config
