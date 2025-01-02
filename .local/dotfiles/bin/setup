@@ -2,7 +2,7 @@
 
 source ~/.local/dotfiles/lib/helpers
 
-setup_ation() {
+setup_atuin() {
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s -- --no-modify-path
     mv ~/.atuin ~/.opt/atuin
 }
