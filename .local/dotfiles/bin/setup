@@ -3,7 +3,7 @@
 source ~/.local/dotfiles/lib/helpers
 
 setup_atuin() {
-    ATUIN_NO_MODIFY_PATH=1
+    export ATUIN_NO_MODIFY_PATH=1
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
     mkdir -p ~/.opt/atuin
     mv ~/.atuin/* ~/.opt/atuin
