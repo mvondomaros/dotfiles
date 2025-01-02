@@ -233,3 +233,9 @@ inoremap <expr> <CR>    pumvisible() ? asyncomplete#close_popup() : "\<CR>""
 
 let g:asyncomplete_auto_completeopt = 0
 set completeopt=menuone,noinsert,noselect,preview
+
+"
+" [[ Configure vim-airline ]]
+
+let g:airline#extensions#tabline#enabled = 1
+let g:airline_powerline_fonts = 1
