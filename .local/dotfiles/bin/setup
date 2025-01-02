@@ -2,11 +2,9 @@
 
 source ~/.local/dotfiles/lib/helpers
 
-setup_macos() {
-    echo "Setting up MacOS."
-    defaults write -g ApplePressAndHoldEnabled -bool false
-    defaults write -g InitialKeyRepeat -int 10
-    defaults write -g KeyRepeat -int 1
+setup_starship() {
+    mkdir -p ~/.local/bin
+    curl -sS https://starship.rs/install.sh | sh -s -- -b=~/.local/bin
 }
 
 setup_conda() {
@@ -18,6 +16,14 @@ setup_conda() {
     rm ~/.opt/miniconda3/miniconda.sh
 }
 
+setup_macos() {
+    echo "Setting up MacOS."
+    defaults write -g ApplePressAndHoldEnabled -bool false
+    defaults write -g InitialKeyRepeat -int 10
+    defaults write -g KeyRepeat -int 1
+}
+
 # Run conditional setup tasks.
+in_path starship || setup_starship
 in_path conda || setup_conda
 is_mac && setup_macos
