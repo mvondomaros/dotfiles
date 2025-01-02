@@ -4,11 +4,11 @@ source ~/.local/dotfiles/lib/helpers
 
 setup_starship() {
     mkdir -p ~/.local/bin
-    curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- -b=$HOME/.local/bin
+    curl -sS https://starship.rs/install.sh | sh -s -- -b=$HOME/.local/bin
 }
 
 setup_fzf() {
-    curl -sS https://github.com/junegunn/fzf/blob/master/install | sh -s -- --xdg --bin
+    curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- --xdg --bin
 }
 
 setup_conda() {
