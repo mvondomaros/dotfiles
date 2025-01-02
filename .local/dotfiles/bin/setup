@@ -5,7 +5,9 @@ source ~/.local/dotfiles/lib/helpers
 setup_atuin() {
     ATUIN_NO_MODIFY_PATH=1
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
-    mv ~/.atuin ~/.opt/atuin
+    mkdir -p ~/.opt/atuin
+    mv ~/.atuin/* ~/.opt/atuin
+    rmdir -f ~/.atuin
     rm -f .config/atuin/atuin-receipt.json
 }
 
