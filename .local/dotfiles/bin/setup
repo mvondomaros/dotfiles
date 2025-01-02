@@ -11,6 +11,12 @@ setup_fzf() {
     curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- --xdg --bin
 }
 
+setup_eza() {
+    wget -c https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz -O - | tar xz
+    chmod +x eza
+    mv eza ~/.local/bin
+}
+
 setup_conda() {
     echo "Setting up conda."
     mkdir -p ~/.opt/miniconda3
@@ -30,5 +36,6 @@ setup_macos() {
 # Run conditional setup tasks.
 in_path starship || setup_starship
 in_path fzf || setup_fzf
+in_path eza || setup_eza
 in_path conda || setup_conda
 is_mac && setup_macos
