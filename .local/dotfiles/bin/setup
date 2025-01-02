@@ -3,8 +3,10 @@
 source ~/.local/dotfiles/lib/helpers
 
 setup_atuin() {
-    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s -- --no-modify-path
+    ATUIN_NO_MODIFY_PATH=1
+    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
     mv ~/.atuin ~/.opt/atuin
+    rm -f .config/atuin/atuin-receipt.json
 }
 
 setup_starship() {
