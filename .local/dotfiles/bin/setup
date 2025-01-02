@@ -4,7 +4,7 @@ source ~/.local/dotfiles/lib/helpers
 
 setup_starship() {
     mkdir -p ~/.local/bin
-    curl -sS https://starship.rs/install.sh | sh -s -- -b=~/.local/bin
+    curl -sS https://starship.rs/install.sh | sh -s -- -b=$HOME/.local/bin
 }
 
 setup_conda() {

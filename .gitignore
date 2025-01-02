@@ -6,6 +6,8 @@
 
 !.config
 !.config/**
+!.local
+!.local/dotfiles
 !.local/dotfiles/**
 .config/nvim/lazy-lock.json
 .config/nvim/lazyvim.json
