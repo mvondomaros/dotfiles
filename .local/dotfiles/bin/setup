@@ -6,8 +6,8 @@ setup_atuin() {
     export ATUIN_NO_MODIFY_PATH=1
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
     mkdir -p ~/.opt/atuin
-    mv ~/.atuin/* ~/.opt/atuin
-    rmdir ~/.atuin
+    mv ~/.atuin/bin/* ~/.opt/atuin
+    rm -rf ~/.atuin
     rm .config/atuin/atuin-receipt.json
 }
 
