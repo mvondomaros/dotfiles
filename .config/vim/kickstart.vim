@@ -68,12 +68,6 @@ set scrolloff=10
 
 " Set highlight on search, but clear on pressing <Esc> in normal mode
 set hlsearch
-nnoremap <Esc> :nohlsearch<CR>
-
-" Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
-" for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
-" is not what someone will guess without a bit more experience.
-tnoremap <Esc><Esc> <C-\><C-n>
 
 " Remap for dealing with word wrap
 nnoremap <expr> <silent> k v:count == 0 ? 'gk' : 'k'
