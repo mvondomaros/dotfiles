@@ -12,7 +12,6 @@ set display=lastline encoding=utf-8 hidden
 set history=10000 incsearch
 set nojoinspaces laststatus=2 ruler
 set showcmd smarttab nostartofline
-set switchbuf=uselast wildmenu "wildoptions=pum,tagfile
 
 
 " [[ Settings other options ]]
