@@ -1,3 +1,6 @@
+" Disable vi compatibility.
+set nocompatible
+
 " Set <space> as the leader key
 let mapleader=' '
 let maplocalleader = ' '
