@@ -1,25 +1,22 @@
 # LS.
 if command -v eza >/dev/null 2>&1; then
     alias ls="eza --color --group-directories-first"
-    alias l="eza -lbh -G"
     alias ll="eza -lbh"
-    alias ldot="eza -lbdh .*"
-    alias ltree="eza -lbh -T -L2"
-    alias lS="eza -lbh -ssize"
-    alias lT="eza -lbh -snewest"
+    alias lS="ll -ssize"
+    alias lT="ll -snewest"
 else
     if [[ "$OSTYPE" == darwin* ]]; then
         alias ls="ls -G"
     else
         alias ls="ls -g --color=auto"
     fi
-    alias l="ls -lh"
     alias ll="ls -lh"
-    alias la="ls -alh"
-    alias ldot="ls -ld .*"
-    alias lS="ls -lhS"
-    alias lT="ls -lhT"
+    alias lS="ll -S"
+    alias lT="ll -T"
 fi
+alias l="ll"
+alias la="ll -a"
+alias ldot="ll -d .*"
 
 # Mask built-ins with better defaults.
 alias mkdir="mkdir -p"
@@ -32,10 +29,6 @@ alias grep="grep --color=auto --exclude-dir={\${(j:,:)GREP_EXCL}}"
 # Date
 alias timestamp="date '+%Y-%m-%d %H:%M:%S'"
 alias datestamp="date '+%Y-%m-%d'"
-
-# Find
-alias fd='find . -type d -name'
-alias ff='find . -type f -name'
 
 # Git
 if command -v lazygit >/dev/null 2>&1; then
