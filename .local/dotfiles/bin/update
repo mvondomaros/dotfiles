@@ -2,6 +2,10 @@
 
 source ~/.local/dotfiles/lib/helpers
 
+echo "Updating dotfiles ..."
+cd $HOME
+GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles git pull
+
 # Homebrew
 echo "Updating brew ..."
 if in_path brew; then
