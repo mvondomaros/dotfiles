@@ -7,8 +7,8 @@ setup_atuin() {
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
     mkdir -p ~/.opt/atuin
     mv ~/.atuin/* ~/.opt/atuin
-    rmdir -f ~/.atuin
-    rm -f .config/atuin/atuin-receipt.json
+    rmdir ~/.atuin
+    rm .config/atuin/atuin-receipt.json
 }
 
 setup_starship() {
