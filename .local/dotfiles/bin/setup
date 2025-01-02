@@ -16,7 +16,6 @@ setup_conda() {
     is_mac && curl -s https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/.opt/miniconda3/miniconda.sh
     bash ~/.opt/miniconda3/miniconda.sh -b -u -p ~/.opt/miniconda3 >/dev/null
     rm ~/.opt/miniconda3/miniconda.sh
-    cp misc/condarc ~/.condarc
 }
 
 # Run conditional setup tasks.
