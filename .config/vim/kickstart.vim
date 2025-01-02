@@ -111,15 +111,6 @@ Plug 'liuchengxu/vim-which-key'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 
-" Enable LSP
-Plug 'prabirshrestha/vim-lsp'
-" Install language servers and configure them for vim-lsp
-Plug 'mattn/vim-lsp-settings'
-
-" Autocompletion
-Plug 'prabirshrestha/asyncomplete.vim'
-Plug 'prabirshrestha/asyncomplete-lsp.vim'
-
 " Colorscheme
 Plug 'catppuccin/vim', { 'as': 'catppuccin' }
 
@@ -169,70 +160,3 @@ let g:which_key_map[' '] = '[ ] Find existing buffers'
 
 nmap <leader>/ :BLines<CR>
 let g:which_key_map['/'] = '[/] Fuzzily search in current buffer'
-
-
-" [[ Configure LSP ]]
-
-" Performance related settings, requires Vim 8.2+
-let g:lsp_use_native_client = 1
-let g:lsp_semantic_enabled = 1
-
-function! s:on_lsp_buffer_enabled() abort
-  setlocal omnifunc=lsp#complete
-  if exists('+tagfunc') | setlocal tagfunc=lsp#tagfunc | endif
-
-  " Keymaps
-  " Go to previous diagnostic message
-  nmap <buffer> [d <plug>(lsp-previous-diagnostic)
-  " Go to next diagnostic message
-  nmap <buffer> ]d <plug>(lsp-next-diagnostic)
-
-  nmap <buffer> <leader>rn <plug>(lsp-rename)
-  let g:which_key_map.r.n = '[R]e[n]ame'
-  nmap <buffer> <leader>ca <plug>(lsp-code-action-float)
-  let g:which_key_map.c.a = '[C]ode [A]ction'
-
-  " [G]oto [D]efinition
-  nmap <buffer> gd <plug>(lsp-definition)
-  " [G]oto [R]eferences
-  nmap <buffer> gr <plug>(lsp-references)
-  " [G]oto [I]mplementation
-  nmap <buffer> gI <plug>(lsp-implementation)
-
-  nmap <buffer> <leader>D <plug>(lsp-peek-type-definition)
-  let g:which_key_map.D = 'Type [D]efinition'
-  nmap <buffer> <leader>ds <plug>(lsp-document-symbol-search)
-  let g:which_key_map.d.s = '[D]ocument [S]ymbols'
-  nmap <buffer> <leader>ws <plug>(lsp-workspace-symbol-search)
-  let g:which_key_map.w.s = '[W]orkspace [S]ymbols'
-
-  " See `:help K` for why this keymap
-  " Hover Documentation
-  nmap <buffer> K <plug>(lsp-hover)
-  " Signature Documentation
-  nmap <buffer> <C-k> <plug>(lsp-signature-help)
-
-  " Lesser used LSP functionality
-  " [G]oto [D]eclaration
-  nmap <buffer> gD <plug>(lsp-declaration)
-
-  " Create a command `:Format` local to the LSP buffer
-  let g:lsp_format_sync_timeout = 1000
-  command! Format LspDocumentFormatSync
-endfunction
-
-augroup lsp_install
-  au!
-  " call s:on_lsp_buffer_enabled only for languages that has the server registered.
-  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
-augroup END
-
-
-" [[ Configure completion ]]
-
-inoremap <expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <CR>    pumvisible() ? asyncomplete#close_popup() : "\<CR>""
-
-let g:asyncomplete_auto_completeopt = 0
-set completeopt=menuone,noinsert,noselect,preview
