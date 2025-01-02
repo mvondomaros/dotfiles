@@ -9,14 +9,12 @@ mattmc3/zfunctions
 
 # OMZ
 getantidote/use-omz
-ohmyzsh/ohmyzsh path:lib
+#ohmyzsh/ohmyzsh path:lib
 
 # OMZ Plugins
-ohmyzsh/ohmyzsh path:plugins/aliases
 ohmyzsh/ohmyzsh path:plugins/copyfile
 ohmyzsh/ohmyzsh path:plugins/copypath
 ohmyzsh/ohmyzsh path:plugins/extract
-ohmyzsh/ohmyzsh path:plugins/eza
 ohmyzsh/ohmyzsh path:plugins/fancy-ctrl-z
 ohmyzsh/ohmyzsh path:plugins/fzf
 ohmyzsh/ohmyzsh path:plugins/starship
