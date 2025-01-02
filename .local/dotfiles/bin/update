@@ -1,8 +1,6 @@
 #!/bin/sh
 
-in_path() {
-    command -v "$1" 2 >/dev/null >&1
-}
+source ~/.local/dotfiles/lib/helpers
 
 # Homebrew
 echo "Updating brew ..."
@@ -42,4 +40,3 @@ echo "Updating vim ..."
 if in_path vim; then
     vim -es -u vimrc -i NONE -c "PlugUpdate" -c "qa"
 fi >/dev/null
-
