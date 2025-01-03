@@ -28,6 +28,15 @@ setup_eza() {
     mv eza ~/.local/bin
 }
 
+setup_fd() {
+    echo "Setting up fd."
+    curl -sS https://api.github.com/repos/sharkdp/fd/releases/latest | grep browser_download_url | grep 'x86_64-unknown-linux-musl.tar.gz"' | awk '{print $2}' | xargs wget -O latest.tar.gz
+    mkdir -p ~/.local/bin
+    tar -O -xf latest.tar.gz '*/fd' >~/.local/bin/fd
+    chmod +x ~/.local/bin/fd
+    rm latest.tar.gz
+}
+
 setup_fzf() {
     echo "Setting up fzf."
     curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- --xdg --bin
@@ -42,7 +51,7 @@ setup_macos() {
 
 setup_ripgrep() {
     echo "Setting up ripgrep."
-    curl -sS https://api.github.com/repos/BurntSushi/ripgrep/releases/latest | grep browser_download_url | grep 'unknown-linux-musl.tar.gz"' | awk '{print $2}' | xargs wget -O latest.tar.gz
+    curl -sS https://api.github.com/repos/BurntSushi/ripgrep/releases/latest | grep browser_download_url | grep 'x86_64-unknown-linux-musl.tar.gz"' | awk '{print $2}' | xargs wget -O latest.tar.gz
     mkdir -p ~/.local/bin
     tar -O -xf latest.tar.gz '*/rg' >~/.local/bin/rg
     chmod +x ~/.local/bin/rg
@@ -59,6 +68,7 @@ setup_starship() {
 in_path conda || setup_conda
 in_path atuin || setup_atuin
 in_path eza || setup_eza
+in_path fd || setup_fd
 in_path fzf || setup_fzf
 in_path rg || setup_ripgrep
 in_path starship || setup_starship
