@@ -4,6 +4,9 @@ mattmc3/zshrc.d
 # Aliases
 ${ZDOTDIR:-$HOME}/.zaliases
 
+# VI Mode
+jeffreytse/zsh-vi-mode
+
 # Make functions available
 mattmc3/zfunctions
 
