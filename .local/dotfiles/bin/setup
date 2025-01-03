@@ -3,27 +3,13 @@
 source ~/.local/dotfiles/lib/helpers
 
 setup_atuin() {
+    echo "Setting up atuin."
     export ATUIN_NO_MODIFY_PATH=1
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh | sh -s
     mkdir -p ~/.opt/atuin
     mv ~/.atuin/bin/* ~/.opt/atuin
     rm -rf ~/.atuin
     rm .config/atuin/atuin-receipt.json
-}
-
-setup_starship() {
-    mkdir -p ~/.local/bin
-    curl -sS https://starship.rs/install.sh | sh -s -- -b=$HOME/.local/bin
-}
-
-setup_fzf() {
-    curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- --xdg --bin
-}
-
-setup_eza() {
-    wget -c https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz -O - | tar xz
-    chmod +x eza
-    mv eza ~/.local/bin
 }
 
 setup_conda() {
@@ -35,6 +21,18 @@ setup_conda() {
     rm ~/.opt/miniconda3/miniconda.sh
 }
 
+setup_eza() {
+    echo "Setting up eza."
+    wget -c https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz -O - | tar xz
+    chmod +x eza
+    mv eza ~/.local/bin
+}
+
+setup_fzf() {
+    echo "Setting up fzf."
+    curl -sS https://raw.githubusercontent.com/junegunn/fzf/refs/heads/master/install | sh -s -- --xdg --bin
+}
+
 setup_macos() {
     echo "Setting up MacOS."
     defaults write -g ApplePressAndHoldEnabled -bool false
@@ -42,10 +40,26 @@ setup_macos() {
     defaults write -g KeyRepeat -int 1
 }
 
+setup_ripgrep() {
+    echo "Setting up ripgrep."
+    curl -sS https://api.github.com/repos/BurntSushi/ripgrep/releases/latest | grep browser_download_url | grep 'unknown-linux-musl.tar.gz"' | awk '{print $2}' | xargs wget -O latest.tar.gz
+    mkdir -p ~/.local/bin
+    tar -O -xf latest.tar.gz '*/rg' >~/.local/bin/rg
+    chmod +x ~/.local/bin/rg
+    rm latest.tar.gz
+}
+
+setup_starship() {
+    echo "Setting up starship."
+    mkdir -p ~/.local/bin
+    curl -sS https://starship.rs/install.sh | sh -s -- -b=$HOME/.local/bin
+}
+
 # Run conditional setup tasks.
-in_path atuin || setup_atuin
-in_path starship || setup_starship
-in_path fzf || setup_fzf
-in_path eza || setup_eza
 in_path conda || setup_conda
+in_path atuin || setup_atuin
+in_path eza || setup_eza
+in_path fzf || setup_fzf
+in_path rg || setup_ripgrep
+in_path starship || setup_starship
 is_mac && setup_macos
