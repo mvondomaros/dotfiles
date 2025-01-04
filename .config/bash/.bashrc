@@ -27,6 +27,7 @@ plugins=(
     conda
     completions
     aliases
+    atuin
 )
 
 for _plugin in "${plugins[@]}"; do
