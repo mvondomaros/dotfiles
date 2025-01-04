@@ -9,10 +9,19 @@ endif
 call plug#begin()
     Plug 'tpope/vim-sensible'
     Plug 'catppuccin/vim', { 'as': 'catppuccin' }
+    Plug 'liuchengxu/vim-better-default'
+    Plug 'liuchengxu/vim-which-key'
+    Plug 'airblade/vim-gitgutter'
     Plug 'itchyny/lightline.vim'
     Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
     Plug 'junegunn/fzf.vim'
 call plug#end()
+
+" Leader
+let g:mapleader = "\<Space>"
+let g:maplocalleader = "\<Space>"
+nnoremap <silent> <leader>      :<c-u>WhichKey '<Space>'<CR>
+nnoremap <silent> <localleader> :<c-u>WhichKey  '<Space>'<CR>
 
 " Colorscheme
 set termguicolors
@@ -44,13 +53,14 @@ set signcolumn=yes
 set smartcase
 set smartindent
 set smarttab
-set smoothscroll
 set softtabstop=4
 set splitbelow
 set splitright
 set noswapfile
 set tabstop=4
+set timeoutlen=100
 set title
+set updatetime=100
 set novisualbell
 set wrap
 set nowritebackup
