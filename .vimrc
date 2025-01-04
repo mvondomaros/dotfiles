@@ -51,7 +51,6 @@ set splitright
 set noswapfile
 set tabstop=4
 set title
-set undofile
 set novisualbell
 set wrap
 set nowritebackup
