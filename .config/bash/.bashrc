@@ -14,6 +14,9 @@ BASH_CACHE_HOME="$XDG_CACHE_HOME"/bash
 REPO_HOME="$BASH_CACHE_HOME"/repos
 mkdir -p "$BASH_HOME" "$BASH_DATA_HOME" "$BASH_CACHE_HOME" "$REPO_HOME"
 
+# Use vi mode
+set -o vi
+
 plugins=(
     options
     repos
