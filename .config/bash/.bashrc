@@ -16,7 +16,6 @@ mkdir -p "$BASH_HOME" "$BASH_DATA_HOME" "$BASH_CACHE_HOME" "$REPO_HOME"
 
 plugins=(
     options
-    brew
     repos
     colors
     starship
@@ -26,7 +25,6 @@ plugins=(
     fzf
     atuin
     conda
-    macos
     completions
     aliases
 )
