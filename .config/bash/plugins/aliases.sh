@@ -23,8 +23,7 @@ alias mkdir="mkdir -p"
 alias rm="rm -I"
 
 # Grep
-GREP_EXCL=(.bzr CVS .git .hg .svn .idea .tox)
-alias grep="grep --color=auto --exclude-dir={\${(j:,:)GREP_EXCL}}"
+alias grep="grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox}"
 
 # Date
 alias timestamp="date '+%Y-%m-%d %H:%M:%S'"
