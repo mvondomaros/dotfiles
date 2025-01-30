@@ -2,21 +2,20 @@
 
 *
 
-# Add/ignore files in the .config directory.
+# Explicit ignore/unignore rules for files in the .config directory.
 
 !.config
 !.config/**
-!.local
+.config/jgit
 .config/nvim/lazy-lock.json
 .config/nvim/lazyvim.json
 .config/zsh/.antidote/
 .config/zsh/.zplugins.zsh
 .config/zsh/.zsh_history
-.config/jgit
 .config/zsh/.zcompdump
 
 
-# Add/ignore files in the .opt directory.
+# Explicit ignore/unignore rules for files in the .opt directory.
 !.opt
 !.opt/dotfiles
 !.opt/dotfiles/**
