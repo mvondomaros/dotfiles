@@ -20,6 +20,7 @@ set -o vi
 plugins=(
     options
     repos
+    preexec
     colors
     starship
     prompt

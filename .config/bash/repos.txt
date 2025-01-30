@@ -1,1 +1,2 @@
 romkatv/gitstatus
+rcaloras/bash-preexec
