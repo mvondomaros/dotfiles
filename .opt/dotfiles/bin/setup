@@ -81,6 +81,7 @@ setup_starship() {
 setup_uv() {
     echo "Setting up uv."
     curl -LsSf https://astral.sh/uv/install.sh | sh
+    uv tool install argcomplete
 }
 
 # Run conditional setup tasks.
