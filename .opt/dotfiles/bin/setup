@@ -51,10 +51,16 @@ setup_lazygit() {
 }
 
 setup_macos() {
-    echo "Setting up MacOS."
-    defaults write -g ApplePressAndHoldEnabled -bool false
-    defaults write -g InitialKeyRepeat -int 10
-    defaults write -g KeyRepeat -int 1
+    if [[ ! -f ~/.cache/dotfiles/SETUP_COMPLETE ]]; then
+        echo "Setting up MacOS."
+        mkdir -p ~/.cache/dotfiles
+        defaults write -g ApplePressAndHoldEnabled -bool false
+        defaults write -g InitialKeyRepeat -int 10
+        defaults write -g KeyRepeat -int 1
+        brew bundle install --file ~/.config/brew/brewfile
+        mkdir -p ~/.cache/dotfiles
+        touch ~/.cache/dotfiles/SETUP_COMPLETE
+    fi
 }
 
 setup_ripgrep() {
