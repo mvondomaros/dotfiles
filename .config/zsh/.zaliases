@@ -25,8 +25,7 @@ alias mkdir="mkdir -p"
 alias rm="rm -I"
 
 # Grep
-GREP_EXCL=(.bzr CVS .git .hg .svn .idea .tox)
-alias grep="grep --color=auto --exclude-dir={\${(j:,:)GREP_EXCL}}"
+alias grep="grep --color=auto"
 
 # Date
 alias timestamp="date '+%Y-%m-%d %H:%M:%S'"
@@ -38,5 +37,4 @@ if command -v lazygit >/dev/null 2>&1; then
 fi
 
 # Bare repositories.
-alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.local/dotfiles/bin:$PATH'
 alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.opt/dotfiles/bin:$PATH'
