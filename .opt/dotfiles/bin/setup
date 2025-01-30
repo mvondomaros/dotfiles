@@ -32,7 +32,7 @@ setup_fd() {
     echo "Setting up fd."
     curl -sS https://api.github.com/repos/sharkdp/fd/releases/latest | grep browser_download_url | grep 'x86_64-unknown-linux-musl.tar.gz"' | awk '{print $2}' | xargs wget -O latest.tar.gz
     mkdir -p ~/.local/bin
-    tar -O -xf latest.tar.gz '*/fd' >~/.local/bin/fd
+    tar --wildcards -O -xf latest.tar.gz '*/fd' >~/.local/bin/fd
     chmod +x ~/.local/bin/fd
     rm latest.tar.gz
 }
