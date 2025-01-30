@@ -27,6 +27,7 @@ ohmyzsh/ohmyzsh path:plugins/zoxide
 atuinsh/atuin
 
 # Completion plugins
+conda-incubator/conda-zsh-completion
 aloxaf/fzf-tab
 zsh-users/zsh-completions path:src kind:fpath
 
