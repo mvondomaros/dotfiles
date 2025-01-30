@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source ~/.local/dotfiles/lib/helpers
+source ~/.opt/dotfiles/lib/helpers
 
 setup_atuin() {
     echo "Setting up atuin."
