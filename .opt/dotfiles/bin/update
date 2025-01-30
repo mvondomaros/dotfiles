@@ -46,4 +46,8 @@ if in_path vim; then
 fi >/dev/null
 
 # UV
-uv tool upgrade --all
+echo "Updating uv ..."
+if in_path vim; then
+    uv self update
+    uv tool upgrade --all
+fi >/dev/null

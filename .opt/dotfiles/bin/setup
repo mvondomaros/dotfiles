@@ -72,13 +72,19 @@ setup_starship() {
     curl -sS https://starship.rs/install.sh | sh -s -- -b=$HOME/.local/bin
 }
 
+setup_uv() {
+    echo "Setting up uv."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+}
+
 # Run conditional setup tasks.
-in_path conda || setup_conda
 in_path atuin || setup_atuin
+in_path conda || setup_conda
 in_path eza || setup_eza
 in_path fd || setup_fd
 in_path fzf || setup_fzf
 in_path lazygit || setup_lazygit
 in_path rg || setup_ripgrep
 in_path starship || setup_starship
+in_path uv || setup_uv
 is_mac && setup_macos
