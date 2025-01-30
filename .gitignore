@@ -7,8 +7,6 @@
 !.config
 !.config/**
 !.local
-!.local/dotfiles
-!.local/dotfiles/**
 .config/nvim/lazy-lock.json
 .config/nvim/lazyvim.json
 .config/zsh/.antidote/
@@ -16,3 +14,9 @@
 .config/zsh/.zsh_history
 .config/jgit
 .config/zsh/.zcompdump
+
+
+# Add/ignore files in the .opt directory.
+!.opt
+!.opt/dotfiles
+!.opt/dotfiles/**
