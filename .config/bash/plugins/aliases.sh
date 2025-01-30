@@ -35,4 +35,4 @@ if command -v lazygit >/dev/null 2>&1; then
 fi
 
 # Bare repositories.
-alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.local/dotfiles/bin:$PATH'
+alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.opt/dotfiles/bin:$PATH'
