@@ -44,3 +44,6 @@ echo "Updating vim ..."
 if in_path vim; then
     vim -es -u vimrc -i NONE -c "PlugUpdate" -c "qa"
 fi >/dev/null
+
+# UV
+uv tool upgrade --all

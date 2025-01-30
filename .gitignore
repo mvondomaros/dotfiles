@@ -14,3 +14,5 @@
 .config/zsh/.antidote/
 .config/zsh/.zplugins.zsh
 .config/zsh/.zsh_history
+.config/jgit
+.config/zsh/.zcompdump
