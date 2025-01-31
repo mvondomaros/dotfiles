@@ -1,43 +1,44 @@
-[display]
-cell_output = "above"
-default_width = "medium"
-code_editor_font_size = 14
-theme = "light"
-dataframes = "rich"
-
-[server]
-follow_symlink = false
-browser = "default"
-
-[package_management]
-manager = "uv"
-
-[keymap]
-preset = "default"
-[keymap.overrides]
-
-[completion]
-copilot = false
-activate_on_typing = true
-
-[formatting]
-line_length = 79
-
-[experimental]
-
-[snippets]
-include_default_snippets = true
-custom_paths = []
+[runtime]
+auto_instantiate = true
+on_cell_change = "autorun"
+auto_reload = "autorun"
 
 [save]
 autosave = "after_delay"
 autosave_delay = 1000
 format_on_save = true
 
+[formatting]
+line_length = 79
+
 [ai]
 rules = ""
 
-[runtime]
-on_cell_change = "autorun"
-auto_instantiate = true
-auto_reload = "autorun"
+[experimental]
+
+[keymap]
+preset = "default"
+
+[keymap.overrides]
+
+[snippets]
+custom_paths = []
+include_default_snippets = true
+
+[package_management]
+manager = "uv"
+
+[server]
+browser = "default"
+follow_symlink = false
+
+[display]
+theme = "light"
+dataframes = "rich"
+default_width = "full"
+code_editor_font_size = 14
+cell_output = "above"
+
+[completion]
+activate_on_typing = true
+copilot = "github"
