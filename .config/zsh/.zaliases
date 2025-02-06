@@ -36,5 +36,8 @@ if command -v lazygit >/dev/null 2>&1; then
     alias lg="lazygit"
 fi
 
+# Open
+alias o=open
+
 # Bare repositories.
 alias dotfiles='GIT_WORK_TREE=~ GIT_DIR=~/.dotfiles PATH=~/.opt/dotfiles/bin:$PATH'

@@ -20,3 +20,4 @@
 !.opt
 !.opt/dotfiles
 !.opt/dotfiles/**
+.config/github-copilot
