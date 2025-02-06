@@ -2,3 +2,4 @@
 
 BASH_HOME="${BASH_HOME:-$HOME/.config/bash}"
 . $BASH_HOME/.bashrc
+[[ -f ~/.bashrc.local ]] && . ~/.bashrc.local
