@@ -59,7 +59,7 @@ set splitright
 set noswapfile
 set tabstop=4
 set timeoutlen=100
-set title
+set notitle
 set updatetime=100
 set novisualbell
 set wrap
