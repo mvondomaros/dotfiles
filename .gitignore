@@ -2,7 +2,11 @@
 
 *
 
-# Explicit ignore/unignore rules for files in the .config directory.
+# Explicit top-level ignore rules.
+!.vmdrc
+!.tkconrc
+
+# Explicit ignore rules for files in the .config directory.
 
 !.config
 !.config/**
@@ -16,7 +20,7 @@
 .config/zsh/.zcompcache
 
 
-# Explicit ignore/unignore rules for files in the .opt directory.
+# Explicit ignore rules for files in the .opt directory.
 !.opt
 !.opt/dotfiles
 !.opt/dotfiles/**

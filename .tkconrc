@@ -1,0 +1,10 @@
+set ::tkcon::OPT(rows) 40
+set ::tkcon::OPT(cols) 81
+set ::tkcon::OPT(font) "systemfont 16"
+set ::tkcon::OPT(history) 300
+set ::tkcon::COLOR(bg) white
+   
+set ::tkcon::OPT(maineval) {
+    bind TkConsole <Up>        [bind TkConsole <<TkCon_PreviousSearch>>]
+    bind TkConsole <Down>      [bind TkConsole <<TkCon_NextSearch>>]
+}
