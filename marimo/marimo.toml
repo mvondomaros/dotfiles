@@ -1,0 +1,48 @@
+[package_management]
+manager = "uv"
+
+[ai]
+rules = ""
+[ai.google]
+
+[ai.anthropic]
+
+[ai.open_ai]
+
+[keymap]
+preset = "default"
+[keymap.overrides]
+
+[completion]
+copilot = "github"
+activate_on_typing = true
+
+[formatting]
+line_length = 79
+
+[display]
+default_width = "full"
+dataframes = "rich"
+cell_output = "above"
+code_editor_font_size = 14
+theme = "light"
+
+[server]
+follow_symlink = false
+browser = "default"
+
+[save]
+autosave = "after_delay"
+autosave_delay = 1000
+format_on_save = true
+
+[runtime]
+auto_instantiate = true
+on_cell_change = "autorun"
+auto_reload = "autorun"
+
+[experimental]
+
+[snippets]
+custom_paths = []
+include_default_snippets = true
