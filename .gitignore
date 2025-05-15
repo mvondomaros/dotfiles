@@ -1,3 +1,4 @@
-nvim/lazyvim.json
-nvim/lazy-lock.json
 fish/fish_variables
+github-copilot
+jgit
+marimo
