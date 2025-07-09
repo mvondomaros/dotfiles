@@ -1,0 +1,9 @@
+[user]
+	name = Michael von Domaros
+	email = mvondomaros@uni-marburg.de
+[push]
+	autoSetupRemote = true
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true
