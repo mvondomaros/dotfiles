@@ -9,3 +9,4 @@ set -q GIT_CONFIG; or set -Ux GIT_CONFIG $HOME/.config/git/.gitconfig
 
 # Set paths.
 fish_add_path ~/.local/bin
+fish_add_path ~/.config/tools
