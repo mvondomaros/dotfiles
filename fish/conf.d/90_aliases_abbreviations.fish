@@ -1,7 +1,7 @@
 if status is-interactive
     # Redefine ls.
     if type -q eza
-        alias ls "eza --color=auto --color-scale=all --color-scale-mode=gradient --icons=auto --hyperlink --group-directories-first"
+        alias ls "eza --color=auto --icons=auto --hyperlink --group-directories-first"
         alias ll "ls --long --git --sort=Name"
         alias la "ls --long --git --sort=Name --all"
         alias l. "ls --long --git --sort=Name --list-dirs .*"
