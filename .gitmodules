@@ -1,0 +1,6 @@
+[submodule "vim"]
+	path = vim
+	url = https://github.com/amix/vimrc.git
+[submodule "nvim"]
+	path = nvim
+	url = https://github.com/mvondomaros/kickstart.nvim.git

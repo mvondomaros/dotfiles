@@ -1,5 +1,5 @@
 # Redefine ls.
-if command -sq eza
+if type -q eza
     alias ls 'eza --color=auto --icons=auto --hyperlink --group-directories-first'
     alias ll 'ls --long --git --sort=Name'
     alias la 'ls --long --git --sort=Name --all'

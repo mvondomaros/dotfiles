@@ -18,7 +18,7 @@ if status is-interactive; and test (uname) = Darwin
     # Quick Look preview of files.
     function peek --description 'Quick Look preview'
         if test (count $argv) -gt 0
-            command -sq qlmanage; and qlmanage -p $argv >/dev/null 2>&1 &
+            type -q qlmanage; and qlmanage -p $argv >/dev/null 2>&1 &
         end
     end
 end

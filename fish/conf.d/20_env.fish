@@ -5,7 +5,6 @@ set -gx LC_COLLATE C
 # Eza config
 set -gx EZA_CONFIG_DIR $XDG_CONFIG_HOME/eza
 
-# Pager & browser, editor
+# Pager & browser
 set -gx PAGER less
 set -gx BROWSER open
-set -Ux EDITOR vim

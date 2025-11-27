@@ -1,4 +1,4 @@
-if command -sq pixi
+if type -q pixi
     set -l version_file ~/.config/pixi/version
     set -l completion_file ~/.config/fish/completions/pixi.fish
     set -l current_version (pixi --version 2>/dev/null)
