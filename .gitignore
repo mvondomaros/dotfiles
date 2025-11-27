@@ -1,4 +1,6 @@
 fish/fish_variables
+pixi/version
 github-copilot
 jgit
 marimo
+bash/completions
