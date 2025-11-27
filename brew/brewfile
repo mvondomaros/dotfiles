@@ -1,28 +1,61 @@
-tap "homebrew/bundle"
-tap "homebrew/services"
 brew "atuin"
+brew "boost"
+brew "cmake"
 brew "coreutils"
 brew "eza"
 brew "fd"
+brew "ffmpeg"
+brew "gcc"
+brew "fftw"
 brew "fish"
 brew "fzf"
 brew "gawk"
+brew "gh"
+brew "git"
 brew "gnu-sed"
+brew "grace"
+brew "graphicsmagick"
 brew "lazygit"
-brew "neovim"
-brew "node"
+brew "mas"
+brew "open-babel"
+brew "pixi"
 brew "ripgrep"
 brew "starship"
-brew "uv"
+brew "vim"
 brew "vivid"
 brew "wget"
+brew "yt-dlp"
+cask "acorn"
 cask "adguard"
+cask "adobe-acrobat-reader"
+cask "anytype"
+cask "avogadro"
+cask "brave-browser"
 cask "font-fira-code"
 cask "font-fira-mono"
 cask "font-fira-sans"
-cask "font-libertinus"
+cask "font-noto-sans"
 cask "font-powerline-symbols"
+cask "inkscape"
 cask "kitty"
-cask "mountain-duck"
+cask "monitorcontrol"
+cask "obs"
 cask "pearcleaner"
 cask "rectangle"
+cask "texifier"
+cask "vlc"
+cask "zotero"
+mas "Agenda", id: 1287445660
+mas "AusweisApp", id: 948660805
+mas "Caffeinated", id: 1362171212
+mas "CrystalFetch", id: 6454431289
+mas "Dropover", id: 1355679052
+mas "Goodnotes", id: 1444383602
+mas "iMovie", id: 408981434
+mas "Keynote", id: 409183694
+mas "Kindle", id: 302584613
+mas "Numbers", id: 409203825
+mas "Pages", id: 409201541
+mas "UTM", id: 1538878817
+mas "WireGuard", id: 1451685025
+mas "Yubico Authenticator", id: 1497506650

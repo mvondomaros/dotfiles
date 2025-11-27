@@ -1,10 +1,10 @@
 #!/usr/bin/env fish
 
-if type -q brew
+if command -sq brew
     brew update && brew upgrade && brew cleanup
 end
 
-if type -q pixi
+if command -sq pixi
     pixi global update
 end
 

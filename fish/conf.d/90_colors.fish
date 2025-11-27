@@ -1,4 +1,6 @@
 if status is-interactive
-    # Set theme.
-    fish_config theme choose "Catppuccin Latte"
+    if not set -q __theme_initialized
+        set -U __theme_initialized 1
+        fish_config theme choose "Catppuccin Latte"
+    end
 end
