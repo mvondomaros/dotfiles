@@ -19,7 +19,7 @@ if ! command -v gah >/dev/null 2>&1; then
     gah install atuinsh/atuin
     gah install BurntSushi/ripgrep
     gah install neovim/neovim
-    #gah install neovim/neovim-releases
+    gah install sharkdp/fd
     gah install starship/starship
 fi
 
