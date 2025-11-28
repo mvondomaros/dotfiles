@@ -5,6 +5,9 @@ return {
 
 	opts = {
 		animate = { enabled = true },
+		bigfile = { enabled = true },
+		bufdelete = { enabled = true },
+		dashboard = { enabled = true },
 		dim = { enabled = true },
 		git = { enabled = true },
 		indent = { enabled = true },
