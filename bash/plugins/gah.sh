@@ -18,6 +18,7 @@ if ! command -v gah >/dev/null 2>&1; then
     install_gah
     gah install atuinsh/atuin
     gah install BurntSushi/ripgrep
+    gah install eza-community/eza
     gah install neovim/neovim
     gah install sharkdp/fd
     gah install starship/starship
