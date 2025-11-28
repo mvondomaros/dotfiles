@@ -1,7 +1,7 @@
 local opt = vim.opt
 
 opt.autowrite = true
-opt.clipboard = vim.env.SSH_CONNECTION and "" or "unnamedplus"
+opt.clipboard = "unnamedplus"
 opt.completeopt = { "menuone", "menuone", "noselect" }
 opt.conceallevel = 2
 opt.confirm = true
@@ -59,3 +59,5 @@ opt.virtualedit = "block"
 opt.wildmode = "longest:full,full"
 opt.winminwidth = 5
 opt.wrap = false
+
+vim.g.clipboard = "osc52"
