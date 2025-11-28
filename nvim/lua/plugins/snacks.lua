@@ -196,14 +196,17 @@ return {
 				function()
 					picker.git_diff()
 				end,
-				desc = "Git diff (hunks)",
+				desc = "Git diff (local)",
 			},
 			{
 				"<leader>gD",
 				function()
-					picker.git_diff({ base = "origin", group = true })
+					picker.git_diff({
+						base = vim.fn.systemlist("git rev-parse --abbrev-ref --symbolic-full-name @{u}")[1],
+						group = true,
+					})
 				end,
-				desc = "Git diff (origin)",
+				desc = "Git diff (upstream)",
 			},
 			{
 				"<leader>gs",
@@ -229,18 +232,11 @@ return {
 				desc = "Git log (cwd)",
 			},
 			{
-				"<leader>gb",
-				function()
-					picker.git_log_line()
-				end,
-				desc = "Git blame line",
-			},
-			{
 				"<leader>gf",
 				function()
 					picker.git_log_file()
 				end,
-				desc = "Git file history",
+				desc = "Git log (file)",
 			},
 			{
 				"<leader>gl",

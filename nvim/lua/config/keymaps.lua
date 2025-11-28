@@ -60,14 +60,10 @@ map("n", "[b", "<cmd>bprevious<cr>", { desc = "Previous buffer" })
 map("n", "]b", "<cmd>bnext<cr>", { desc = "Next buffer" })
 
 map("n", "<leader>bb", "<cmd>e #<cr>", {
-	desc = "Switch to alternate buffer",
+	desc = "Switch buffer",
 })
 map("n", "<leader>`", "<cmd>e #<cr>", {
-	desc = "Switch to alternate buffer",
-})
-
-map("n", "<leader>bD", "<cmd>:bd<cr>", {
-	desc = "Delete buffer and window",
+	desc = "Switch buffer",
 })
 
 -- Clear search
@@ -119,27 +115,17 @@ map("n", "<leader>fn", "<cmd>enew<cr>", {
 	desc = "New file",
 })
 
--- Formatting
-map({ "n", "x" }, "<leader>cf", function()
-	require("conform").format({
-		async = true,
-		lsp_fallback = true,
-	})
-end, {
-	desc = "Format (Conform)",
-})
-
 -- Quit
 map("n", "<leader>qq", "<cmd>qa<cr>", {
 	desc = "Quit all",
 })
 
 -- Windows
-map("n", "<leader>-", "<C-W>s", {
+map("n", "<leader>w-", "<C-W>s", {
 	desc = "Split window below",
 	remap = true,
 })
-map("n", "<leader>|", "<C-W>v", {
+map("n", "<leader>w|", "<C-W>v", {
 	desc = "Split window right",
 	remap = true,
 })

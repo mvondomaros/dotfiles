@@ -13,6 +13,23 @@ return {
 			lsp_format = "fallback",
 		},
 	},
+	keys = {
+		{
+			"<leader>c",
+			function()
+				require("conform").format({
+					async = true,
+					lsp_fallback = true,
+				})
+			end,
+			mode = { "n", "x" },
+			desc = "Conform (format)",
+		},
+	},
+	config = function(_, opts)
+		require("conform").setup(opts)
+		vim.o.formatexpr = "v:conform.formatexpr()"
+	end,
 	config = function(_, opts)
 		require("conform").setup(opts)
 
