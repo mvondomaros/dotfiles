@@ -19,17 +19,14 @@ plugins=(
     options
     history
     environment
+    bash-preexec # required by atuin
     gah
     pixi
     colors
     starship
-    editor
-    #fzf
-    #atuin
-    #conda
-    #completions
-    #atuin
     aliases
+    atuin
+    editor
 )
 
 for _plugin in "${plugins[@]}"; do
