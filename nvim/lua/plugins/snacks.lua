@@ -8,6 +8,7 @@ return {
 		bigfile = { enabled = true },
 		bufdelete = { enabled = true },
 		dashboard = { enabled = true },
+		explorer = { enabled = true, replace_netrw = true, trash = true },
 		dim = { enabled = true },
 		git = { enabled = true },
 		indent = { enabled = true },
@@ -82,6 +83,13 @@ return {
 					picker.files({ cwd = project_root() })
 				end,
 				desc = "Find files (root)",
+			},
+			{
+				"<leader>fe",
+				function()
+					Snacks.explorer.open()
+				end,
+				desc = "Explorer",
 			},
 			{
 				"<leader>ff",
