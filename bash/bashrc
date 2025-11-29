@@ -22,7 +22,6 @@ plugins=(
     bash-preexec # required by atuin
     gah
     pixi
-    colors
     starship
     aliases
     atuin
