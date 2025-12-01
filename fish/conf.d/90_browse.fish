@@ -22,7 +22,7 @@ if type -q fzf; and type -q fd
             $EDITOR "$path"
         end
 
-        commandline -f repaint
+        commandline -f insert-mode
     end
 
     bind -M default ' ' browse
