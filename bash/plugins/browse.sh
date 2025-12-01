@@ -25,7 +25,7 @@ if command -v fzf >/dev/null 2>&1 && command -v fd >/dev/null 2>&1; then
     fi
   }
 
-  bind -m vi-command '\e ': 'browse\n'
-  bind -m vi-insert  '\e ': 'browse\n'
+  bind -m vi-command '"\e ": "browse\n"'
+  bind -m vi-insert  '"\e ": "browse\n"'
 fi
 
