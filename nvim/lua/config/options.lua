@@ -61,5 +61,5 @@ opt.winminwidth = 5
 opt.wrap = false
 
 if vim.env.SSH_CONNECTION then
-	vim.g.clipboard = require("vim.ui.clipboard.osc52")
+	vim.g.clipboard = "osc52"
 end
