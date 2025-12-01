@@ -22,7 +22,8 @@ if type -q fzf; and type -q fd
             $EDITOR "$path"
         end
 
-        commandline -f insert-mode
+        set -g fish_bind_mode insert
+        commandline -f repaint
     end
 
     bind -M default ' ' browse
