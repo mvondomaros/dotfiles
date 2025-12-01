@@ -21,6 +21,7 @@ if ! command -v gah >/dev/null 2>&1; then
     gah install eza-community/eza
     gah install neovim/neovim
     gah install sharkdp/fd
+    gah install junegunn/fzf
     gah install starship/starship
 fi
 
