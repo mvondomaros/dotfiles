@@ -25,5 +25,5 @@ if type -q fzf; and type -q fd
         commandline -f repaint
     end
 
-    bind -M default '  ' browse
+    bind -M default ' ' browse
 end
