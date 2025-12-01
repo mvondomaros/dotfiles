@@ -60,4 +60,6 @@ opt.wildmode = "longest:full,full"
 opt.winminwidth = 5
 opt.wrap = false
 
--- vim.g.clipboard = "osc52"
+if vim.env.SSH_CONNECTION then
+	vim.g.clipboard = require("vim.ui.clipboard.osc52")
+end
