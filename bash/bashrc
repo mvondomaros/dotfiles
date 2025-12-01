@@ -26,6 +26,7 @@ plugins=(
     aliases
     atuin
     editor
+    browse
 )
 
 for _plugin in "${plugins[@]}"; do
