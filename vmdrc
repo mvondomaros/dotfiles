@@ -90,8 +90,9 @@ proc ::vmdrc_define_material {name amb diff spec shin opac} {
 }
 
 # Spheres: minimize specular hotspots; keep AO clean.
-::vmdrc_define_material PastelSphere       0.40 0.65 0.00 0.05 1.00
-::vmdrc_define_material PastelSphereTrans  0.40 0.65 0.00 0.05 0.35
+# (Specular kept at 0; shininess low; ambient slightly elevated for dense packs)
+::vmdrc_define_material PastelSphere       0.35 0.65 0.00 0.05 1.00
+::vmdrc_define_material PastelSphereTrans  0.35 0.65 0.00 0.05 0.35
 
 # General-purpose pastel materials
 ::vmdrc_define_material PastelMatte        0.35 0.75 0.00 0.05 1.00
@@ -110,45 +111,10 @@ after idle {
     display aodirect 0.35
     display depthcue off
     display projection Orthographic
-    display rendermode GLSL
+    display rendermode GLSL 
 
-    # Background colors:
+    # Background colors
     color Display Background white
     color Display BackgroundBot iceblue
-}
-
-
-###############################################################################
-# 4) Tachyon HQ render presets (call when ready to render)
-###############################################################################
-
-proc ::vmdrc_render_tachyon {basename extra_args} {
-    set dat "${basename}.dat"
-    set tga "${basename}.tga"
-
-    # Export current scene
-    render TachyonInternal $dat
-
-    # Invoke tachyon
-    set cmd [concat $::VMDRC_TACHYON_BIN $dat -o $tga $extra_args]
-    puts "Running: $cmd"
-    catch { eval exec $cmd } result
-    puts $result
-    puts "Wrote: $tga"
-}
-
-# Fast preview
-proc vmdrc_tachyon_draft {basename} {
-    ::vmdrc_render_tachyon $basename {-res 1600 1200 -aasamples 4}
-}
-
-# Publication default (opaque scenes)
-proc vmdrc_tachyon_pub {basename} {
-    ::vmdrc_render_tachyon $basename {-res 3200 2400 -aasamples 16}
-}
-
-# Publication for transparency / heavy AO (more AA to reduce noise)
-proc vmdrc_tachyon_pub_trans {basename} {
-    ::vmdrc_render_tachyon $basename {-res 3200 2400 -aasamples 32}
 }
 
