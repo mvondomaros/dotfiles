@@ -1,120 +1,74 @@
-###############################################################################
-# 1) AO-robust pastel palette for SPHERES: overwrite color IDs 0–33
-###############################################################################
-
-# ---- Solid named colors (0–16) ----
-# 0  blue
-color change rgb 0   0.56 0.76 0.96
-# 1  red
-color change rgb 1   0.94 0.56 0.60
-# 2  gray
-color change rgb 2   0.68 0.68 0.70
-# 3  orange
-color change rgb 3   0.94 0.72 0.52
-# 4  yellow
-color change rgb 4   0.96 0.90 0.50
-# 5  tan
-color change rgb 5   0.82 0.76 0.64
-# 6  silver
-color change rgb 6   0.76 0.78 0.82
-# 7  green
-color change rgb 7   0.56 0.86 0.66
-# 8  white
-color change rgb 8   0.94 0.94 0.92
-# 9  pink
-color change rgb 9   0.94 0.60 0.78
-# 10 cyan
-color change rgb 10  0.48 0.84 0.86
-# 11 purple
-color change rgb 11  0.72 0.60 0.90
-# 12 lime
-color change rgb 12  0.76 0.90 0.46
-# 13 mauve
-color change rgb 13  0.72 0.62 0.76
-# 14 ochre
-color change rgb 14  0.84 0.68 0.42
-# 15 iceblue
-color change rgb 15  0.72 0.88 0.96
-# 16 black (soft)
-color change rgb 16  0.18 0.18 0.20
-
-# ---- Translucent named colors (17–33): MUST mirror solid RGB ----
-# 17 trans_blue
-color change rgb 17  0.56 0.76 0.96
-# 18 trans_red
-color change rgb 18  0.94 0.56 0.60
-# 19 trans_gray
-color change rgb 19  0.68 0.68 0.70
-# 20 trans_orange
-color change rgb 20  0.94 0.72 0.52
-# 21 trans_yellow
-color change rgb 21  0.96 0.90 0.50
-# 22 trans_tan
-color change rgb 22  0.82 0.76 0.64
-# 23 trans_silver
-color change rgb 23  0.76 0.78 0.82
-# 24 trans_green
-color change rgb 24  0.56 0.86 0.66
-# 25 trans_white
-color change rgb 25  0.94 0.94 0.92
-# 26 trans_pink
-color change rgb 26  0.94 0.60 0.78
-# 27 trans_cyan
-color change rgb 27  0.48 0.84 0.86
-# 28 trans_purple
-color change rgb 28  0.72 0.60 0.90
-# 29 trans_lime
-color change rgb 29  0.76 0.90 0.46
-# 30 trans_mauve
-color change rgb 30  0.72 0.62 0.76
-# 31 trans_ochre
-color change rgb 31  0.84 0.68 0.42
-# 32 trans_iceblue
-color change rgb 32  0.72 0.88 0.96
-# 33 trans_black
-color change rgb 33  0.18 0.18 0.20
-
-
-###############################################################################
-# 2) Materials: sphere-optimized pastel materials (AO/shadow friendly)
-###############################################################################
-
-# Helper: define/update a material consistently (create if missing)
-proc ::vmdrc_define_material {name amb diff spec shin opac} {
-    catch { material add $name }
-    material change ambient   $name $amb
-    material change diffuse   $name $diff
-    material change specular  $name $spec
-    material change shininess $name $shin
-    material change opacity   $name $opac
-}
-
-# Spheres: minimize specular hotspots; keep AO clean.
-# (Specular kept at 0; shininess low; ambient slightly elevated for dense packs)
-::vmdrc_define_material PastelSphere       0.35 0.65 0.00 0.05 1.00
-::vmdrc_define_material PastelSphereTrans  0.35 0.65 0.00 0.05 0.35
-
-# General-purpose pastel materials
-::vmdrc_define_material PastelMatte        0.35 0.75 0.00 0.05 1.00
-::vmdrc_define_material PastelSoft         0.30 0.70 0.08 0.12 1.00
-::vmdrc_define_material PastelTrans        0.30 0.70 0.05 0.10 0.40
-
-
-###############################################################################
-# 3) Display settings (robustly applied after idle)
-###############################################################################
 after idle {
-    # Display settings:
-    display backgroundgradient on
-    display shadows on
-    display ambientocclusion on
-    display aodirect 0.35
-    display depthcue off
-    display projection Orthographic
-    display rendermode GLSL 
 
-    # Background colors
-    color Display Background white
-    color Display BackgroundBot iceblue
+  display update off
+
+  foreach {c r g b} {
+    blue     0.6000 0.7000 0.9200
+    red      0.9200 0.6200 0.6200
+    gray     0.5850 0.5850 0.6100
+    orange   0.9200 0.7000 0.5000
+    yellow   0.9000 0.8600 0.4500
+    tan      0.9200 0.7800 0.5800
+    silver   0.8700 0.8700 0.8800
+    green    0.4800 0.8600 0.5400
+    white    0.9800 0.9800 0.9750
+    pink     0.9200 0.6600 0.8200
+    cyan     0.4500 0.8200 0.8200
+    purple   0.7800 0.6200 0.9200
+    lime     0.7000 0.8800 0.4500
+    mauve    0.9000 0.6800 0.9000
+    ochre    0.9000 0.7600 0.4600
+    iceblue  0.5000 0.7200 0.9200
+    black    0.1200 0.1200 0.1300
+  } {
+    color change rgb $c $r $g $b
+  }
+
+  foreach c {
+    yellow2 yellow3 green2 green3 cyan2 cyan3 blue2 blue3
+    violet violet2 magenta magenta2 red2 red3 orange2 orange3
+  } {
+    color change rgb $c 1.0 1.0 1.0
+  }
+
+  color Display Background orange3
+
+  menu main on
+  menu tkcon on
+  menu main move 50 20
+  menu tkcon move 700 20
+  display resize 1200 900
+  display reposition 50 920
+
+  catch { display rendermode GLSL }
+  display antialias on
+  display projection orthographic
+  display depthcue off
+  axes location off
+  stage location off
+
+  light 0 on
+  light 1 on
+  light 2 on
+  light 3 off
+  light 0 pos { 0.30  0.40  1.00 }
+  light 1 pos {-0.80  0.20  0.60 }
+  light 2 pos { 0.10 -0.60 -1.00 }
+
+  display shadows on
+  display ambientocclusion on
+  display aoambient 0.90
+  display aodirect  0.28
+
+  catch { material add PastelAO }
+  material change ambient   PastelAO 0.14
+  material change diffuse   PastelAO 0.80
+  material change specular  PastelAO 0.07
+  material change shininess PastelAO 0.10
+  material change mirror    PastelAO 0.00
+  material change opacity   PastelAO 1.00
+  catch { mol default material PastelAO }
+
+  display update on
+  display update
 }
-
