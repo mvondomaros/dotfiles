@@ -3,3 +3,7 @@ pixi/version
 github-copilot
 jgit
 bash/completions
+pixi/version
+fish/completions
+hatch
+nvim/lazy-lock.json

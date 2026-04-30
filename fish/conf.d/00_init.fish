@@ -5,7 +5,7 @@ set -gx XDG_STATE_HOME $HOME/.local/state
 set -gx XDG_CACHE_HOME $HOME/.cache
 
 # Set GIT_CONFIG
-set -gx GIT_CONFIG_GLOBAL $HOME/.config/git/.gitconfig
+set -gx GIT_CONFIG_GLOBAL $HOME/.config/git/config
 
 # Set paths.
 fish_add_path ~/.local/bin
