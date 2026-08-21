@@ -1,0 +1,42 @@
+" LazyVim-style mappings for JetBrains IDEs.
+" Upstream hard-codes ~/.lazy-idea, so load its modules from this XDG config.
+
+source ~/.config/lazy-idea/modules/settings.vim
+source ~/.config/lazy-idea/modules/plugins.vim
+source ~/.config/lazy-idea/modules/navigation.vim
+source ~/.config/lazy-idea/modules/lsp.vim
+
+let g:WhichKeyDesc_leader_b = "<leader>b +buffer"
+source ~/.config/lazy-idea/modules/buffer.vim
+
+let g:WhichKeyDesc_leader_c = "<leader>c +code"
+source ~/.config/lazy-idea/modules/code.vim
+
+let g:WhichKeyDesc_leader_d = "<leader>d +debug"
+source ~/.config/lazy-idea/modules/debug.vim
+
+let g:WhichKeyDesc_leader_f = "<leader>f +file/find"
+source ~/.config/lazy-idea/modules/file.vim
+
+let g:WhichKeyDesc_leader_g = "<leader>g +git"
+source ~/.config/lazy-idea/modules/git.vim
+
+let g:WhichKeyDesc_leader_s = "<leader>s +search"
+source ~/.config/lazy-idea/modules/search.vim
+
+let g:WhichKeyDesc_leader_t = "<leader>t +test"
+source ~/.config/lazy-idea/modules/test.vim
+
+let g:WhichKeyDesc_leader_u = "<leader>u +ui"
+source ~/.config/lazy-idea/modules/ui.vim
+
+let g:WhichKeyDesc_leader_w = "<leader>w +windows"
+source ~/.config/lazy-idea/modules/window.vim
+
+let g:WhichKeyDesc_leader_x = "<leader>x +diagnostics/quickfix"
+source ~/.config/lazy-idea/modules/diagnostics.vim
+
+let g:WhichKeyDesc_leader_tab = "<leader><tab> +tabs"
+source ~/.config/lazy-idea/modules/tabs.vim
+
+source ~/.config/lazy-idea/modules/defaults.vim
