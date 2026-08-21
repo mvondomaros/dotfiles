@@ -1,9 +1,43 @@
-fish/fish_variables
-pixi/version
-github-copilot
-jgit
-bash/completions
-pixi/version
-fish/completions
-hatch
-nvim/lazy-lock.json
+# This repository is also the live XDG config directory. Ignore new top-level
+# application directories by default and explicitly allow only managed config.
+/*
+!/.gitignore
+!/.gitmodules
+!/LICENSE
+!/README.md
+!/atuin/
+!/bash/
+!/brew/
+!/eza/
+!/fish/
+!/git/
+!/ideavim/
+!/kitty/
+!/lazy-idea/
+!/lazygit/
+!/nvim/
+!/pixi/
+!/starship.toml
+!/tools/
+!/vim/
+!/vimrc
+!/vmdrc
+
+# Machine-local state and credentials within managed directories.
+/fish/fish_variables
+/github-copilot/
+/jgit/
+
+# Generated shell completions and version markers.
+/bash/completions/
+/fish/completions/
+/pixi/version
+
+# Application state not intended as configuration.
+/hatch/
+
+# OS and editor metadata.
+.DS_Store
+**/.DS_Store
+*~
+*.swp

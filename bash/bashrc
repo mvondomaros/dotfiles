@@ -42,4 +42,3 @@ unset _plugin
 if [ -f "$HOME/.bashrc.local" ]; then
     source "$HOME/.bashrc.local"
 fi
-export PATH="/home/domaros/.pixi/bin:$PATH"

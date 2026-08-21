@@ -1,17 +1,13 @@
 if test (uname) = Darwin
-    set -l brew_prefix /opt/homebrew
-
-    # Bootstrap.
-    if not test -x $brew_prefix/bin/brew
-        if status is-interactive
-            echo "Bootstrapping Homebrew"
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Installation is intentionally handled outside shell startup.
+    if type -q brew
+        eval (brew shellenv)
+    else
+        for brew_prefix in /opt/homebrew /usr/local
+            if test -x $brew_prefix/bin/brew
+                eval ($brew_prefix/bin/brew shellenv)
+                break
+            end
         end
     end
-
-    # Initialize.
-    if test -x $brew_prefix/bin/brew
-        eval ($brew_prefix/bin/brew shellenv)
-    end
 end
-

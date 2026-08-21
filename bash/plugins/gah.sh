@@ -1,21 +1,21 @@
-install_jq() {
-    echo "Bootstrapping jq..."
-    jq_url="https://github.com/stedolan/jq/releases/download/jq-1.8.1/jq-linux-amd64"
-    curl -L "$jq_url" -o "$HOME/.local/bin/jq"
-    chmod +x "$HOME/.local/bin/jq"
-}
+# Package installation must be an explicit action, never a shell-startup side
+# effect. This helper is primarily intended for Linux hosts without Homebrew.
+bootstrap_cli_tools() {
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "curl is required to bootstrap CLI tools." >&2
+        return 1
+    fi
 
-install_gah() {
-    echo "Bootstrapping gah..."
-    bash -c "$(curl -fsSL https://raw.githubusercontent.com/get-gah/gah/refs/heads/master/tools/install.sh)"
-}
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "jq is required by gah; install it with the system package manager." >&2
+        return 1
+    fi
 
-if ! command -v jq >/dev/null 2>&1; then
-    install_jq
-fi
+    if ! command -v gah >/dev/null 2>&1; then
+        echo "Bootstrapping gah..."
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/get-gah/gah/refs/heads/master/tools/install.sh)" || return
+    fi
 
-if ! command -v gah >/dev/null 2>&1; then
-    install_gah
     gah install atuinsh/atuin
     gah install BurntSushi/ripgrep
     gah install eza-community/eza
@@ -23,5 +23,4 @@ if ! command -v gah >/dev/null 2>&1; then
     gah install sharkdp/fd
     gah install junegunn/fzf
     gah install starship/starship
-fi
-
+}

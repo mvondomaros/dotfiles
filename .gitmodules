@@ -1,6 +1,8 @@
 [submodule "vim"]
 	path = vim
 	url = https://github.com/amix/vimrc.git
+	shallow = true
 [submodule "lazy-idea"]
 	path = lazy-idea
 	url = https://github.com/cufarvid/lazy-idea.git
+	shallow = true

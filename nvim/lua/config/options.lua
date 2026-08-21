@@ -2,12 +2,11 @@ local opt = vim.opt
 
 opt.autowrite = true
 opt.clipboard = "unnamedplus"
-opt.completeopt = { "menuone", "menuone", "noselect" }
+opt.completeopt = { "menuone", "noselect" }
 opt.conceallevel = 2
 opt.confirm = true
 opt.cursorline = true
 opt.expandtab = true
-opt.inccommand = "split"
 opt.fillchars = {
 	foldopen = "",
 	foldclose = "",
