@@ -61,10 +61,10 @@ after idle {
   display aodirect  0.28
 
   catch { material add PastelAO }
-  material change ambient   PastelAO 0.14
-  material change diffuse   PastelAO 0.80
-  material change specular  PastelAO 0.07
-  material change shininess PastelAO 0.10
+  material change ambient   PastelAO 0.12
+  material change diffuse   PastelAO 0.75
+  material change specular  PastelAO 0.50
+  material change shininess PastelAO 0.70
   material change mirror    PastelAO 0.00
   material change opacity   PastelAO 1.00
   catch { mol default material PastelAO }
