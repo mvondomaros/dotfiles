@@ -1,6 +1,6 @@
 if status is-interactive
-    if not set -q __theme_initialized
-        set -U __theme_initialized 1
-        fish_config theme choose "Catppuccin Latte"
+    if not set -q __ayu_light_theme_initialized
+        set -U __ayu_light_theme_initialized 1
+        fish_config theme choose ayu
     end
 end
