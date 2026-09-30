@@ -10,3 +10,9 @@ execute 'source ' . fnameescape(s:vim_runtime . '/vimrcs/extended.vim')
 if filereadable(s:vim_runtime . '/my_configs.vim')
   execute 'source ' . fnameescape(s:vim_runtime . '/my_configs.vim')
 endif
+
+" Override the submodule's default theme with the portable Ayu Light palette.
+execute 'set runtimepath^=' . fnameescape(s:config_home . '/vim-colors')
+let g:ayucolor = 'light'
+set background=light
+colorscheme ayu_light
