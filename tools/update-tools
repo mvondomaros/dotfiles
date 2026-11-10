@@ -1,0 +1,3 @@
+#!/bin/sh
+# Updates only this repository's tool set; never Pixi project/global environments.
+exec "$(dirname "$0")/install-tools" --update "$@"

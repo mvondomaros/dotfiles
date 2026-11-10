@@ -1,0 +1,15 @@
+#!/bin/sh
+# Optional cached completions; run after installing/updating Pixi.
+set -eu
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles
+command -v pixi >/dev/null 2>&1 || exit 0
+mkdir -p "$cache_dir"
+for shell in bash fish; do
+    tmp=$(mktemp "$cache_dir/pixi.$shell.XXXXXX")
+    if pixi completion --shell "$shell" > "$tmp"; then
+        mv -f "$tmp" "$cache_dir/pixi.$shell"
+    else
+        rm -f "$tmp"
+        exit 1
+    fi
+done

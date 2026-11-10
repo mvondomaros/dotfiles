@@ -1,0 +1,55 @@
+#!/bin/sh
+# Explicitly download pinned plugins. Parser installation is optional.
+set -eu
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+parsers=false
+spell=false
+for option in "$@"; do
+    case $option in
+        --parsers) parsers=true ;;
+        --spell) spell=true ;;
+        *) printf 'Usage: %s [--parsers] [--spell]\n' "$0" >&2; exit 2 ;;
+    esac
+done
+command -v nvim >/dev/null 2>&1 || { printf 'Neovim is unavailable; use Vim.\n' >&2; exit 1; }
+nvim --headless -u NONE -i NONE '+lua if vim.fn.has("nvim-0.11") == 0 then vim.cmd("cquit 1") end' +qa
+if nvim --headless -u NONE -i NONE -l "$repo_dir/tools/check-editor.lua" "$repo_dir/nvim/lazy-lock.json" >/dev/null 2>&1; then
+    printf 'reuse: pinned Neovim plugins\n'
+else
+    lazy_dir=${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/lazy.nvim
+    if [ ! -d "$lazy_dir/.git" ]; then
+        mkdir -p "$(dirname "$lazy_dir")"
+        git clone --filter=blob:none https://github.com/folke/lazy.nvim.git "$lazy_dir"
+    fi
+    commit=$(nvim --headless -u NONE -i NONE -l "$repo_dir/tools/lazy-commit.lua" "$repo_dir/nvim/lazy-lock.json")
+    git -C "$lazy_dir" checkout "$commit"
+    DOTFILES_NVIM_SETUP=1 nvim --headless -i NONE '+Lazy! restore' +qa
+    nvim --headless -u NONE -i NONE -l "$repo_dir/tools/check-editor.lua" "$repo_dir/nvim/lazy-lock.json"
+fi
+if [ "$parsers" = true ]; then
+    DOTFILES_PARSER_SETUP="$repo_dir/tools/setup-parsers.lua" nvim --headless -i NONE '+lua dofile(vim.env.DOTFILES_PARSER_SETUP)' +qa
+fi
+if [ "$spell" = true ]; then
+    spell_dir=${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/spell
+    if nvim --headless -u NONE -i NONE '+lua if #vim.api.nvim_get_runtime_file("spell/de.utf-8.spl", true) == 0 then vim.cmd("cquit 1") end' +qa >/dev/null 2>&1; then
+        printf 'reuse: German spelling dictionary\n'
+    else
+        mkdir -p "$spell_dir"
+        temporary=$(mktemp "$spell_dir/.de.XXXXXX")
+        trap 'rm -f "$temporary"' EXIT HUP INT TERM
+        if [ -n "${DOTFILES_DOWNLOAD_DIR:-}" ] && [ -f "$DOTFILES_DOWNLOAD_DIR/de.utf-8.spl" ]; then
+            cp "$DOTFILES_DOWNLOAD_DIR/de.utf-8.spl" "$temporary"
+        else
+            curl -fsSL --retry 1 --connect-timeout 10 --max-time 90 https://ftp.nluug.nl/pub/vim/runtime/spell/de.utf-8.spl -o "$temporary"
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+            digest=$(sha256sum "$temporary")
+        else
+            digest=$(shasum -a 256 "$temporary")
+        fi
+        [ "${digest%% *}" = 73c7107ea339856cdbe921deb92a45939c4de6eb9c07261da1b9dd19f683a3d1 ] || { printf 'German dictionary checksum mismatch\n' >&2; exit 1; }
+        mv "$temporary" "$spell_dir/de.utf-8.spl"
+        trap - EXIT HUP INT TERM
+        printf 'installed: German spelling dictionary\n'
+    fi
+fi

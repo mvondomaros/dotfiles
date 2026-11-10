@@ -7,58 +7,58 @@ endif
 let g:colors_name = 'ayu_light'
 set background=light
 
-hi Normal       guifg=#5C6773 guibg=#FAFAFA cterm=NONE gui=NONE
-hi Comment      guifg=#ABB0B6 guibg=NONE cterm=NONE gui=NONE
-hi Constant     guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE
-hi String       guifg=#86B300 guibg=NONE cterm=NONE gui=NONE
-hi Character    guifg=#86B300 guibg=NONE cterm=NONE gui=NONE
-hi Number       guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE
-hi Boolean      guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE
-hi Identifier   guifg=#36A3D9 guibg=NONE cterm=NONE gui=NONE
-hi Function     guifg=#F29718 guibg=NONE cterm=NONE gui=NONE
-hi Statement    guifg=#FF7733 guibg=NONE cterm=NONE gui=NONE
-hi Conditional  guifg=#FF7733 guibg=NONE cterm=NONE gui=NONE
-hi Repeat       guifg=#FF7733 guibg=NONE cterm=NONE gui=NONE
-hi Operator     guifg=#E7C547 guibg=NONE cterm=NONE gui=NONE
-hi Keyword      guifg=#FF7733 guibg=NONE cterm=NONE gui=NONE
-hi Exception    guifg=#FF7733 guibg=NONE cterm=NONE gui=NONE
-hi PreProc      guifg=#E6B673 guibg=NONE cterm=NONE gui=NONE
-hi Type         guifg=#36A3D9 guibg=NONE cterm=NONE gui=NONE
-hi Special      guifg=#E6B673 guibg=NONE cterm=NONE gui=NONE
-hi Underlined   guifg=#36A3D9 guibg=NONE cterm=underline gui=underline
-hi Error        guifg=#FAFAFA guibg=#FF3333 cterm=NONE gui=NONE
-hi Todo         guifg=#F07178 guibg=NONE cterm=NONE gui=NONE
+hi Normal       guifg=#5C6166 guibg=#F8F9FA cterm=NONE gui=NONE ctermfg=241 ctermbg=231
+hi Comment      guifg=#ABADB1 guibg=NONE cterm=NONE gui=NONE ctermfg=145
+hi Constant     guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE ctermfg=140
+hi String       guifg=#86B300 guibg=NONE cterm=NONE gui=NONE ctermfg=106
+hi Character    guifg=#86B300 guibg=NONE cterm=NONE gui=NONE ctermfg=106
+hi Number       guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE ctermfg=140
+hi Boolean      guifg=#A37ACC guibg=NONE cterm=NONE gui=NONE ctermfg=140
+hi Identifier   guifg=#399EE6 guibg=NONE cterm=NONE gui=NONE ctermfg=74
+hi Function     guifg=#F2AE49 guibg=NONE cterm=NONE gui=NONE ctermfg=215
+hi Statement    guifg=#FA8D3E guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi Conditional  guifg=#FA8D3E guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi Repeat       guifg=#FA8D3E guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi Operator     guifg=#ED9366 guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi Keyword      guifg=#FA8D3E guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi Exception    guifg=#FA8D3E guibg=NONE cterm=NONE gui=NONE ctermfg=209
+hi PreProc      guifg=#E6BA7E guibg=NONE cterm=NONE gui=NONE ctermfg=180
+hi Type         guifg=#399EE6 guibg=NONE cterm=NONE gui=NONE ctermfg=74
+hi Special      guifg=#E6BA7E guibg=NONE cterm=NONE gui=NONE ctermfg=180
+hi Underlined   guifg=#399EE6 guibg=NONE cterm=underline gui=underline ctermfg=74
+hi Error        guifg=#F8F9FA guibg=#E65050 cterm=NONE gui=NONE ctermfg=231 ctermbg=167
+hi Todo         guifg=#F07171 guibg=NONE cterm=NONE gui=NONE ctermfg=203
 
-hi CursorLine   guibg=#F3F3F3 ctermbg=NONE gui=NONE
-hi CursorColumn guibg=#F3F3F3 ctermbg=NONE gui=NONE
-hi ColorColumn  guibg=#F3F3F3 ctermbg=NONE gui=NONE
-hi LineNr       guifg=#D9D8D7 guibg=NONE cterm=NONE gui=NONE
-hi CursorLineNr guifg=#FF6A00 guibg=#F3F3F3 cterm=bold gui=bold
-hi Visual       guifg=NONE guibg=#F0EEE4 cterm=NONE gui=NONE
-hi Search       guifg=#FAFAFA guibg=#A37ACC cterm=NONE gui=NONE
-hi IncSearch    guifg=#FAFAFA guibg=#FF6A00 cterm=NONE gui=NONE
-hi Pmenu        guifg=#5C6773 guibg=#F0EEE4 cterm=NONE gui=NONE
-hi PmenuSel     guifg=#FAFAFA guibg=#41A6D9 cterm=NONE gui=NONE
-hi StatusLine   guifg=#5C6773 guibg=#FFFFFF cterm=NONE gui=NONE
-hi StatusLineNC guifg=#828C99 guibg=#FFFFFF cterm=NONE gui=NONE
-hi VertSplit    guifg=#D9D8D7 guibg=NONE cterm=NONE gui=NONE
-hi SignColumn   guifg=#5C6773 guibg=NONE cterm=NONE gui=NONE
-hi Folded       guifg=#828C99 guibg=#FFFFFF cterm=NONE gui=NONE
-hi Directory    guifg=#36A3D9 guibg=NONE cterm=NONE gui=NONE
-hi DiffAdd      guifg=#86B300 guibg=#FFFFFF cterm=NONE gui=NONE
-hi DiffChange   guifg=#36A3D9 guibg=#FFFFFF cterm=NONE gui=NONE
-hi DiffDelete   guifg=#F07178 guibg=#FFFFFF cterm=NONE gui=NONE
-hi DiffText     guifg=#5C6773 guibg=#F0EEE4 cterm=NONE gui=NONE
-hi ErrorMsg     guifg=#FF3333 guibg=NONE cterm=NONE gui=NONE
-hi WarningMsg   guifg=#FF3333 guibg=NONE cterm=NONE gui=NONE
-hi MatchParen   guifg=#5C6773 guibg=#FAFAFA cterm=underline gui=underline
-hi NonText      guifg=#D9D8D7 guibg=NONE cterm=NONE gui=NONE
-hi SpecialKey   guifg=#D9D8D7 guibg=NONE cterm=NONE gui=NONE
-hi TabLine      guifg=#5C6773 guibg=#FFFFFF cterm=NONE gui=NONE
-hi TabLineSel   guifg=#FAFAFA guibg=#41A6D9 cterm=bold gui=bold
-hi Title        guifg=#FF7733 guibg=NONE cterm=bold gui=bold
+hi CursorLine   guibg=#F3F4F5 gui=NONE ctermbg=255
+hi CursorColumn guibg=#F3F4F5 gui=NONE ctermbg=255
+hi ColorColumn  guibg=#F3F4F5 gui=NONE ctermbg=255
+hi LineNr       guifg=#CCCFD3 guibg=NONE cterm=NONE gui=NONE ctermfg=252
+hi CursorLineNr guifg=#FFAA33 guibg=#F3F4F5 cterm=bold gui=bold ctermfg=215 ctermbg=255
+hi Visual       guifg=NONE guibg=#D3E1F5 cterm=NONE gui=NONE ctermbg=189
+hi Search       guifg=#F8F9FA guibg=#A37ACC cterm=NONE gui=NONE ctermfg=231 ctermbg=140
+hi IncSearch    guifg=#F8F9FA guibg=#FFAA33 cterm=NONE gui=NONE ctermfg=231 ctermbg=215
+hi Pmenu        guifg=#5C6166 guibg=#D3E1F5 cterm=NONE gui=NONE ctermfg=241 ctermbg=189
+hi PmenuSel     guifg=#F8F9FA guibg=#399EE6 cterm=NONE gui=NONE ctermfg=231 ctermbg=74
+hi StatusLine   guifg=#5C6166 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=241 ctermbg=255
+hi StatusLineNC guifg=#8A9199 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=246 ctermbg=255
+hi VertSplit    guifg=#CCCFD3 guibg=NONE cterm=NONE gui=NONE ctermfg=252
+hi SignColumn   guifg=#5C6166 guibg=NONE cterm=NONE gui=NONE ctermfg=241
+hi Folded       guifg=#8A9199 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=246 ctermbg=255
+hi Directory    guifg=#399EE6 guibg=NONE cterm=NONE gui=NONE ctermfg=74
+hi DiffAdd      guifg=#86B300 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=106 ctermbg=255
+hi DiffChange   guifg=#399EE6 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=74 ctermbg=255
+hi DiffDelete   guifg=#F07171 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=203 ctermbg=255
+hi DiffText     guifg=#5C6166 guibg=#D3E1F5 cterm=NONE gui=NONE ctermfg=241 ctermbg=189
+hi ErrorMsg     guifg=#E65050 guibg=NONE cterm=NONE gui=NONE ctermfg=167
+hi WarningMsg   guifg=#E65050 guibg=NONE cterm=NONE gui=NONE ctermfg=167
+hi MatchParen   guifg=#5C6166 guibg=#F8F9FA cterm=underline gui=underline ctermfg=241 ctermbg=231
+hi NonText      guifg=#CCCFD3 guibg=NONE cterm=NONE gui=NONE ctermfg=252
+hi SpecialKey   guifg=#CCCFD3 guibg=NONE cterm=NONE gui=NONE ctermfg=252
+hi TabLine      guifg=#5C6166 guibg=#F3F4F5 cterm=NONE gui=NONE ctermfg=241 ctermbg=255
+hi TabLineSel   guifg=#F8F9FA guibg=#399EE6 cterm=bold gui=bold ctermfg=231 ctermbg=74
+hi Title        guifg=#FA8D3E guibg=NONE cterm=bold gui=bold ctermfg=209
 
-hi GitGutterAdd          guifg=#86B300 guibg=NONE cterm=NONE gui=NONE
-hi GitGutterChange       guifg=#36A3D9 guibg=NONE cterm=NONE gui=NONE
-hi GitGutterDelete       guifg=#F07178 guibg=NONE cterm=NONE gui=NONE
-hi GitGutterChangeDelete guifg=#F29718 guibg=NONE cterm=NONE gui=NONE
+hi GitGutterAdd          guifg=#86B300 guibg=NONE cterm=NONE gui=NONE ctermfg=106
+hi GitGutterChange       guifg=#399EE6 guibg=NONE cterm=NONE gui=NONE ctermfg=74
+hi GitGutterDelete       guifg=#F07171 guibg=NONE cterm=NONE gui=NONE ctermfg=203
+hi GitGutterChangeDelete guifg=#F2AE49 guibg=NONE cterm=NONE gui=NONE ctermfg=215

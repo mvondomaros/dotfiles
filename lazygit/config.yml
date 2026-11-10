@@ -1,23 +1,17 @@
-theme:
-  activeBorderColor:
-    - '#4cbe99'
-    - bold
-  inactiveBorderColor:
-    - '#8a9199'
-  optionsTextColor:
-    - '#41a6d9'
-  selectedLineBgColor:
-    - '#f0ede4'
-  cherryPickedCommitBgColor:
-    - '#f0ede4'
-  cherryPickedCommitFgColor:
-    - '#4cbe99'
-  unstagedChangesColor:
-    - '#f07078'
-  defaultFgColor:
-    - '#5b6673'
-  searchingActiveBorderColor:
-    - '#f19618'
-
-authorColors:
-  '*': '#41a6d9'
+# Ayu Light; theme settings belong under gui in Lazygit.
+gui:
+  colorScheme: light
+  theme:
+    activeBorderColor: ['#FFAA33', bold]
+    inactiveBorderColor: ['#8A9199']
+    searchingActiveBorderColor: ['#F2AE49', bold]
+    optionsTextColor: ['#399EE6']
+    selectedLineFgColor: ['#5C6166']
+    selectedLineBgColor: ['#D3E1F5']
+    inactiveViewSelectedLineBgColor: ['#E7EEF7']
+    cherryPickedCommitBgColor: ['#E0E7CD']
+    cherryPickedCommitFgColor: ['#5C6166']
+    unstagedChangesColor: ['#E65050']
+    defaultFgColor: ['#5C6166']
+    authorColors:
+      '*': '#399EE6'

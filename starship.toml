@@ -2,21 +2,42 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
 add_newline = true
+# Keep prompt work small on shared cluster filesystems.
+format = "$hostname$directory$git_branch$cmd_duration$character"
+scan_timeout = 30
+command_timeout = 300
 palette = "ayu_light"
 
 [palettes.ayu_light]
-red = "#f07078"
-orange = "#f19618"
+red = "#e65050"
+orange = "#fa8d3e"
 yellow = "#f2ae49"
 green = "#86b300"
-teal = "#4cbe99"
-cyan = "#41a6d9"
+teal = "#4cbf99"
+cyan = "#55b4d4"
 blue = "#399ee6"
 purple = "#a37acc"
-text = "#575f66"
+text = "#5c6166"
 muted = "#8a9199"
-surface = "#f0ede4"
-base = "#fafafa"
+surface = "#f3f4f5"
+base = "#f8f9fa"
 
 [battery]
 disabled = true
+
+[hostname]
+ssh_only = true
+style = "muted"
+
+[directory]
+style = "blue"
+
+[git_branch]
+style = "purple"
+
+[cmd_duration]
+style = "orange"
+
+[character]
+success_symbol = "[❯](green)"
+error_symbol = "[❯](red)"

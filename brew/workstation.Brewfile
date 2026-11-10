@@ -1,0 +1,49 @@
+brew "boost"
+brew "cmake"
+brew "coreutils"
+brew "ffmpeg"
+brew "gcc"
+brew "fftw"
+brew "gawk"
+brew "gh"
+brew "gnu-sed"
+brew "grace"
+brew "graphicsmagick"
+brew "mas"
+brew "open-babel"
+brew "vivid"
+brew "wget"
+brew "yt-dlp"
+cask "acorn"
+cask "adguard"
+cask "adobe-acrobat-reader"
+cask "anytype"
+cask "avogadro"
+cask "codex"
+cask "claude-code"
+cask "font-fira-mono"
+cask "font-fira-sans"
+cask "font-noto-sans"
+cask "inkscape"
+cask "monitorcontrol"
+cask "obs"
+cask "pearcleaner"
+cask "rectangle"
+cask "tailscale-app"
+cask "texifier"
+cask "vlc"
+cask "zotero"
+mas "Agenda", id: 1287445660
+mas "AusweisApp", id: 948660805
+mas "Caffeinated", id: 1362171212
+mas "CrystalFetch", id: 6454431289
+mas "Dropover", id: 1355679052
+mas "Goodnotes", id: 1444383602
+mas "iMovie", id: 408981434
+mas "Keynote", id: 409183694
+mas "Kindle", id: 302584613
+mas "Numbers", id: 409203825
+mas "Pages", id: 409201541
+mas "UTM", id: 1538878817
+mas "WireGuard", id: 1451685025
+mas "Yubico Authenticator", id: 1497506650

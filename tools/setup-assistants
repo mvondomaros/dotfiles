@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Explicit workstation-only theme setup; preserve other native agent settings.
+
+Requires Python 3.11+ for TOML validation. Does not install or authenticate agents.
+"""
+from copy import deepcopy
+from datetime import datetime
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import tempfile
+import tomllib
+
+REPO = Path(__file__).resolve().parents[1]
+CODEX_THEME = 'dotfiles-ayu-light'
+
+
+def codex_config(text):
+    before = tomllib.loads(text)
+    expected = deepcopy(before)
+    expected.setdefault('tui', {})['theme'] = CODEX_THEME
+    if before == expected:
+        return text
+    lines = text.splitlines(keepends=True)
+    header = re.compile(r'''^\s*\[\s*(?:tui|"tui"|'tui')\s*\]\s*(?:#.*)?$''')
+    key = re.compile(r'''^\s*(?:theme|"theme"|'theme')\s*=''')
+    section = next((i for i, line in enumerate(lines) if header.match(line.rstrip())), None)
+    value = json.dumps(CODEX_THEME)
+    if section is not None:
+        end = next((i for i in range(section + 1, len(lines)) if lines[i].lstrip().startswith('[')), len(lines))
+        existing = next((i for i in range(section + 1, end) if key.match(lines[i])), None)
+        if existing is None:
+            lines.insert(section + 1, 'theme = ' + value + '\n')
+        else:
+            lines[existing] = 'theme = ' + value + '\n'
+    else:
+        end = next((i for i, line in enumerate(lines) if line.lstrip().startswith('[')), len(lines))
+        dotted = re.compile(r'''^\s*(?:tui|"tui"|'tui')\s*\.\s*(?:theme|"theme"|'theme')\s*=''')
+        existing = next((i for i in range(end) if dotted.match(lines[i])), None)
+        if existing is not None:
+            lines[existing] = 'tui.theme = ' + value + '\n'
+        elif any(re.match(r'''^\s*(?:tui|"tui"|'tui')\s*\.''', line) for line in lines[:end]):
+            if end and not lines[end - 1].endswith('\n'):
+                lines[end - 1] += '\n'
+            lines.insert(end, 'tui.theme = ' + value + '\n')
+        else:
+            lines.extend(['\n[tui]\n', 'theme = ' + value + '\n'])
+    result = ''.join(lines)
+    if tomllib.loads(result) != expected:
+        raise ValueError('Cannot change only tui.theme safely; no Codex config was written')
+    return result
+
+
+def main():
+    state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))
+    backup = state/'dotfiles/backups'/('assistants-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    changes = []
+    if shutil.which('codex'):
+        home = Path(os.environ.get('CODEX_HOME', str(Path.home()/'.codex')))
+        config = home/'config.toml'
+        text = config.read_text() if config.exists() else ''
+        changes.append(('codex-config', config, codex_config(text).encode()))
+        changes.append(('codex-theme', home/'themes'/('dotfiles-ayu-light.tmTheme'), (REPO/'dotfiles/assistants/ayu-light.tmTheme').read_bytes()))
+    if shutil.which('claude'):
+        home = Path(os.environ.get('CLAUDE_CONFIG_DIR', str(Path.home()/'.claude')))
+        config = home/'settings.json'
+        settings = json.loads(config.read_text()) if config.exists() else {}
+        settings['theme'] = 'custom:ayu-light'
+        changes.append(('claude-config', config, (json.dumps(settings, indent=2, ensure_ascii=False)+'\n').encode()))
+        changes.append(('claude-theme', home/'themes/ayu-light.json', (REPO/'dotfiles/assistants/ayu-light.json').read_bytes()))
+    # Validate every input before writing any of the native files.
+    for label, path, content in changes:
+        if path.exists() and path.read_bytes() == content:
+            print('reuse: ' + label)
+            continue
+        backup.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.exists():
+            saved = backup/label
+            shutil.copy2(path, saved)
+            saved.chmod(0o600)
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(prefix='.'+path.name, dir=path.parent)
+        try:
+            with os.fdopen(descriptor, 'wb') as stream:
+                stream.write(content)
+            Path(temporary).chmod(path.stat().st_mode & 0o777 if path.exists() else 0o600)
+            os.replace(temporary, path)
+        finally:
+            if Path(temporary).exists():
+                Path(temporary).unlink()
+        print('configured: ' + label)
+    if backup.exists():
+        print('backup: ' + str(backup))
+    if not changes:
+        print('No Codex/Claude Code executables found; install workstation dependencies first.')
+
+
+if __name__ == '__main__':
+    main()

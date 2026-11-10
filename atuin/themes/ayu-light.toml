@@ -1,0 +1,21 @@
+# Ayu Light; foregrounds match the pinned neovim-ayu palette.
+[theme]
+name = "ayu-light"
+parent = "default"
+
+[colors]
+Base = "#5C6166"
+Annotation = "#8A9199"
+Guidance = "#399EE6"
+Important = "#A37ACC"
+Title = "#FFAA33"
+Muted = "#8A9199"
+AlertInfo = "#55B4D4"
+AlertWarn = "#FA8D3E"
+AlertError = "#E65050"
+SyntaxCommand = "#55B4D4"
+SyntaxFlag = "#A37ACC"
+SyntaxString = "#86B300"
+SyntaxVariable = "#5C6166"
+SyntaxOperator = "#ED9366"
+SyntaxComment = "#ABADB1"

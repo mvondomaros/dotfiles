@@ -1,0 +1,2 @@
+# Ayu Light. FZF_DEFAULT_OPTS can still override individual options.
+--color=light,bg:#F8F9FA,fg:#5C6166,bg+:#D3E1F5,fg+:#5C6166,hl:#FA8D3E,hl+:#FA8D3E,prompt:#FFAA33,pointer:#399EE6,marker:#86B300,spinner:#A37ACC,info:#8A9199,border:#8A9199,header:#55B4D4

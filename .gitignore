@@ -9,7 +9,10 @@
 !/bash/
 !/brew/
 !/eza/
+!/dotfiles/
+!/tests/
 !/fish/
+!/fzf/
 !/git/
 !/ideavim/
 !/kitty/
@@ -42,3 +45,8 @@
 **/.DS_Store
 *~
 *.swp
+__pycache__/
+*.pyc
+
+# Private host selection, environment, and application overrides.
+/dotfiles/local/

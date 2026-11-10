@@ -19,8 +19,10 @@ opt.foldlevel = 99
 opt.foldmethod = "indent"
 opt.foldtext = ""
 opt.formatoptions = "jcroqlnt"
-opt.grepformat = "%f:%l:%c:%m"
-opt.grepprg = "rg --vimgrep"
+if vim.fn.executable("rg") == 1 then
+	opt.grepformat = "%f:%l:%c:%m"
+	opt.grepprg = "rg --vimgrep"
+end
 opt.ignorecase = true
 opt.inccommand = "nosplit"
 opt.jumpoptions = "view"
@@ -45,7 +47,10 @@ opt.signcolumn = "yes"
 opt.smartcase = true
 opt.smartindent = true
 opt.smoothscroll = true
-opt.spelllang = { "en", "de" }
+opt.spelllang = { "en" }
+if #vim.api.nvim_get_runtime_file("spell/de.utf-8.spl", true) > 0 then
+	opt.spelllang:append("de")
+end
 opt.splitbelow = true
 opt.splitkeep = "screen"
 opt.splitright = true

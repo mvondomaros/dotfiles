@@ -11,6 +11,7 @@ return {
 		wk.setup(opts)
 
 		wk.add({
+			{ "<leader>c", group = "code", mode = { "n", "x" } },
 			-- top-level leader groups (normal mode)
 			{ "<leader>b", group = "buffer", mode = "n" },
 			{ "<leader>f", group = "file / find", mode = "n" },

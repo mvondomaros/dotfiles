@@ -1,1 +1,2 @@
-source "$HOME/.bashrc"
+# /etc/profile is loaded by Bash before this file; leave site setup intact.
+[ ! -r "$HOME/.bashrc" ] || source "$HOME/.bashrc"

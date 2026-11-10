@@ -5,3 +5,6 @@ sync_frequency = "1h"
 [sync]
 records = true
 
+[theme]
+name = "ayu-light"
+

@@ -1,0 +1,306 @@
+#!/bin/sh
+# Reuse working tools; install verified standalone releases only when missing.
+set -u
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+update=false
+check=false
+adopt=false
+adopt_all=false
+profile=cli
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        --update) update=true ;;
+        --check) check=true ;;
+        --adopt) adopt=true ;;
+        --adopt-all) adopt=true; adopt_all=true ;;
+        --editor) profile=editor ;;
+        --help)
+            printf 'Usage: %s [--editor] [--update] [--check] [--adopt TOOL ... | --adopt-all] [TOOL ...]\n' "$0"
+            exit 0 ;;
+        --) shift; break ;;
+        -*) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
+        *) break ;;
+    esac
+    shift
+done
+if [ "$profile" = editor ] && [ "$#" -gt 0 ]; then
+    printf '%s\n' '--editor takes no tool names.' >&2; exit 2
+fi
+if [ "$adopt_all" = true ] && [ "$#" -gt 0 ]; then
+    printf '%s\n' '--adopt-all takes no tool names.' >&2; exit 2
+fi
+if [ "$adopt" = true ] && [ "$adopt_all" = false ] && [ "$#" -eq 0 ]; then
+    printf 'Specify tools after --adopt, or use --adopt-all.\n' >&2; exit 2
+fi
+requested=$*
+for tool in "$@"; do
+    case $tool in pixi|lazygit|rg|fd|atuin|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|texlab|tinymist|typst|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
+done
+if [ "$(uname -s)" = Darwin ]; then
+    if [ "$adopt" = true ]; then
+        printf 'Adoption is Linux-only; macOS tools are managed by Homebrew.\n' >&2; exit 2
+    fi
+    if ! command -v brew >/dev/null 2>&1; then
+        for prefix in /opt/homebrew /usr/local; do
+            if [ -x "$prefix/bin/brew" ]; then PATH="$prefix/bin:$PATH"; break; fi
+        done
+    fi
+    export PATH HOMEBREW_NO_AUTO_UPDATE=1
+    command -v brew >/dev/null 2>&1 || { printf 'Install Homebrew first: https://brew.sh\n' >&2; exit 1; }
+    if [ "$check" = true ]; then
+        if [ -z "$requested" ]; then
+            set -- $(awk -F '"' '/^(brew|cask) / { print $2 }' "$repo_dir/brew/$profile.Brewfile")
+        else
+            formulae=
+            for tool in "$@"; do
+                case $tool in rg) tool=ripgrep ;; nvim) tool=neovim ;; esac
+                formulae="$formulae $tool"
+            done
+            set -- $formulae
+        fi
+        exec brew outdated --verbose "$@"
+    fi
+    if [ "$update" = true ]; then brew update || exit; fi
+    if [ -z "$requested" ]; then
+        if [ "$update" = true ]; then
+            exec brew bundle --file="$repo_dir/brew/$profile.Brewfile"
+        fi
+        exec brew bundle --no-upgrade --file="$repo_dir/brew/$profile.Brewfile"
+    fi
+    for tool in "$@"; do
+        case $tool in rg) formula=ripgrep ;; nvim) formula=neovim ;; *) formula=$tool ;; esac
+        if [ "$update" = true ] && brew list --formula "$formula" >/dev/null 2>&1; then
+            brew upgrade "$formula" || exit
+        elif brew list --formula "$formula" >/dev/null 2>&1; then
+            printf 'reuse: %s (Homebrew)\n' "$formula"
+        else
+            brew install "$formula" || exit
+        fi
+    done
+    exit 0
+fi
+case $(uname -s) in Linux) ;; *) printf 'Unsupported OS\n' >&2; exit 1 ;; esac
+arch=$(uname -m)
+case $arch in x86_64|aarch64) ;; *) printf 'Unsupported architecture: %s; retain system tools.\n' "$arch" >&2; exit 1 ;; esac
+# The site's PATH has precedence. Older standalone locations are reused too.
+for dir in "$HOME/.local/bin" "$HOME/.pixi/bin" "$HOME/.opt/atuin"; do
+    case :$PATH: in *:"$dir":*) ;; *) PATH="$PATH:$dir" ;; esac
+done
+export PATH
+bin_dir=$HOME/.local/bin
+store=${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/tools
+if [ -z "$requested" ]; then
+    if [ "$profile" = editor ]; then
+        set -- shfmt shellcheck stylua
+    else
+        set -- pixi lazygit rg fd atuin eza nvim starship ruff ty
+    fi
+fi
+real_home=$(CDPATH= cd -- "$HOME" && pwd -P)
+backup_dir=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/tool-backups/$(date +%Y%m%d-%H%M%S)-$$
+# Only known, user-owned standalone locations are eligible. Resolve links so a
+# ~/.local/bin bridge to a system/module executable cannot be adopted.
+user_executable() {
+    launcher=$(CDPATH= cd -- "$(dirname -- "$1")" && pwd -P)/$(basename -- "$1")
+    case $launcher in
+        "$real_home"/.local/bin/*|"$real_home"/.pixi/bin/*|"$real_home"/.opt/*) ;;
+        *) return 1 ;;
+    esac
+    resolved=$(readlink -f -- "$1") || return 1
+    case $resolved in
+        "$real_home"/.local/bin/*|"$real_home"/.pixi/bin/*|"$real_home"/.opt/*)
+            [ -f "$resolved" ] && [ -O "$resolved" ] ;;
+        *) return 1 ;;
+    esac
+}
+version_of() {
+    "$1" --version 2>/dev/null | head -n 20 | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1
+}
+newer_than_pin() {
+    [ -n "$1" ] && [ -n "$2" ] || return 1
+    awk -v a="$1" -v b="$2" 'BEGIN { split(a,x,"."); split(b,y,"."); for(i=1;i<=3;i++) { if(x[i]+0>y[i]+0) exit 0; if(x[i]+0<y[i]+0) exit 1 } exit 1 }'
+}
+if [ "$check" = true ]; then
+    printf '%-9s %-12s %-12s %-12s %s\n' TOOL INSTALLED PIN OWNER ACTION
+fi
+install_one() (
+    tool=$1
+    dest=$store/$tool
+    active=$(command -v "$tool" 2>/dev/null || :)
+    working=false
+    current=
+    owner=missing
+    if [ -n "$active" ]; then
+        owner=protected
+        if [ -f "$dest/.dotfiles-managed" ] && [ "$active" -ef "$dest/bin/$tool" ]; then
+            owner=managed
+        elif user_executable "$active"; then
+            owner=user
+        fi
+        if "$active" --version >/dev/null 2>&1; then
+            working=true
+            current=$(version_of "$active")
+        fi
+    fi
+    release=$(awk -v tool="$tool" -v arch="$arch" '$1 == tool && $2 == arch { print $3, $4; exit }' "$repo_dir/tools/linux-releases.txt")
+    digest=${release%% *}
+    url=${release#* }
+    target=$(printf '%s\n' "$url" | sed -n 's|.*/download/v\{0,1\}\([0-9][^/]*\)/.*|\1|p')
+    expected=$(printf '%s\n%s' "$url" "$digest")
+    action=install
+    if [ "$working" = true ]; then
+        action=reuse
+        if [ "$owner" = managed ] && { [ "$update" = true ] || [ "$adopt" = true ]; }; then
+            action=update
+            if [ "$(cat "$dest/.dotfiles-managed")" = "$expected" ]; then action=current; fi
+        elif [ "$owner" = user ] && [ "$adopt" = true ]; then
+            action=adopt
+        fi
+        if { [ "$action" = update ] || [ "$action" = adopt ]; } && newer_than_pin "$current" "$target"; then
+            action=newer-than-pin
+        fi
+    elif [ "$owner" = protected ]; then
+        action=protected
+    elif [ "$owner" = user ] && [ "$adopt" = false ]; then
+        action=unmanaged
+    elif [ "$owner" = user ]; then
+        action=adopt
+    fi
+    if [ "$tool" = rsync ]; then
+        target=system
+        if [ "$working" = true ]; then
+            action=reuse
+        elif [ "$check" = false ]; then
+            printf 'rsync is required from the Linux OS or site modules.\n' >&2; exit 1
+        fi
+    fi
+    if [ "$action" = adopt ] && { [ -e "$bin_dir/$tool" ] || [ -L "$bin_dir/$tool" ]; } && ! user_executable "$bin_dir/$tool"; then
+        action=protected
+    fi
+    if [ "$check" = true ]; then
+        printf '%-9s %-12s %-12s %-12s %s\n' "$tool" "${current:-unknown}" "${target:-unknown}" "$owner" "$action"
+        [ -z "$active" ] || printf '  %s\n' "$active"
+        exit 0
+    fi
+    case $action in
+        reuse|current|newer-than-pin)
+            printf '%s: %s (%s)\n' "$action" "$tool" "$active"; exit 0 ;;
+        protected|unmanaged)
+            printf 'skip: preserve protected/unmanaged launcher for %s.\n' "$tool" >&2; exit 1 ;;
+    esac
+    if { [ -e "$bin_dir/$tool" ] || [ -L "$bin_dir/$tool" ]; } && [ "$owner" != managed ]; then
+        if [ "$action" != adopt ] || ! user_executable "$bin_dir/$tool"; then
+            printf 'skip: preserve unmanaged/protected %s\n' "$bin_dir/$tool" >&2; exit 1
+        fi
+    fi
+    if [ "$tool" = fd ] && [ "$action" != adopt ] && command -v fdfind >/dev/null 2>&1 && fdfind --version >/dev/null 2>&1; then
+        mkdir -p "$bin_dir"
+        ln -s "$(command -v fdfind)" "$bin_dir/fd"
+        printf 'reuse: fd via fdfind\n'; exit 0
+    fi
+    [ -n "$release" ] || { printf 'skip: no release for %s on %s\n' "$tool" "$arch" >&2; exit 1; }
+    mkdir -p "$store" "$bin_dir"
+    tmp=$(mktemp -d "$store/.install-$tool.XXXXXX") || exit
+    committed=false
+    published=false
+    active_path=
+    bin_path=$(CDPATH= cd -- "$bin_dir" && pwd -P)/$tool
+    saved_active=
+    saved_bin=
+    cleanup() {
+        code=$?
+        trap - EXIT HUP INT TERM
+        if [ "$committed" = false ]; then
+            if [ "$published" = true ] && [ "$owner" != managed ]; then
+                for path in "$bin_path" "$active_path"; do
+                    [ -n "$path" ] || continue
+                    if [ -L "$path" ] && [ "$(readlink "$path")" = "$dest/bin/$tool" ]; then rm -f "$path"; fi
+                done
+            fi
+            if [ "$published" = true ]; then rm -rf "$dest"; fi
+            if [ -d "$tmp/previous" ]; then mv "$tmp/previous" "$dest"; fi
+            [ -z "$saved_active" ] || mv "$saved_active" "$active_path"
+            [ -z "$saved_bin" ] || mv "$saved_bin" "$bin_path"
+        fi
+        rm -rf "$tmp"
+        exit "$code"
+    }
+    trap cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' HUP TERM
+    case $url in
+        *.tar.gz) suffix=.tar.gz ;;
+        *.tar.xz) suffix=.tar.xz ;;
+        *.zip) suffix=.zip ;;
+        *) suffix= ;;
+    esac
+    archive=$tmp/archive$suffix
+    if [ -n "${DOTFILES_DOWNLOAD_DIR:-}" ] && [ -f "$DOTFILES_DOWNLOAD_DIR/$tool-$arch$suffix" ]; then
+        cp "$DOTFILES_DOWNLOAD_DIR/$tool-$arch$suffix" "$archive" || exit
+    else
+        command -v curl >/dev/null 2>&1 || { printf 'curl is needed to download %s\n' "$tool" >&2; exit 1; }
+        curl -fsSL --retry 1 --connect-timeout 10 --max-time 180 "$url" -o "$archive" || exit
+    fi
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$archive")
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$archive")
+    else
+        printf 'No SHA-256 verifier available.\n' >&2; exit 1
+    fi
+    [ "${actual%% *}" = "$digest" ] || { printf 'Checksum mismatch for %s\n' "$tool" >&2; exit 1; }
+    mkdir "$tmp/unpack"
+    case $suffix in
+        .tar.gz) tar -xzf "$archive" -C "$tmp/unpack" || exit ;;
+        .tar.xz) tar -xJf "$archive" -C "$tmp/unpack" || exit ;;
+        .zip) unzip -q "$archive" -d "$tmp/unpack" || exit ;;
+        '') cp "$archive" "$tmp/unpack/$tool" || exit ;;
+    esac
+    binary=$(find "$tmp/unpack" -type f -name "$tool" | head -n 1)
+    [ -n "$binary" ] || { printf 'Missing executable: %s\n' "$tool" >&2; exit 1; }
+    chmod u+x "$binary"
+    "$binary" --version >/dev/null 2>&1 || { printf 'skip: %s is incompatible; retain fallback tools.\n' "$tool" >&2; exit 1; }
+    if [ "$tool" = nvim ]; then
+        # Neovim needs its runtime files alongside the executable.
+        "$binary" --headless -u NONE -i NONE +qa || exit
+        mv "$(dirname "$(dirname "$binary")")" "$tmp/ready" || exit
+    else
+        mkdir -p "$tmp/ready/bin"
+        mv "$binary" "$tmp/ready/bin/$tool" || exit
+    fi
+    printf '%s\n%s\n' "$url" "$digest" > "$tmp/ready/.dotfiles-managed"
+    # Download and validate everything before moving any existing launcher.
+    ln -s "$dest/bin/$tool" "$tmp/bin-link" || exit
+    if [ "$action" = adopt ]; then
+        active_path=$(CDPATH= cd -- "$(dirname -- "$active")" && pwd -P)/$(basename -- "$active")
+        tool_backup=$backup_dir/$tool
+        mkdir -p "$tool_backup" || exit
+        chmod 700 "$backup_dir" "$tool_backup"
+        printf '%s\n' "$active_path" > "$tool_backup/active.path"
+        mv "$active_path" "$tool_backup/active" || exit
+        saved_active=$tool_backup/active
+        if [ "$active_path" != "$bin_path" ] && { [ -e "$bin_path" ] || [ -L "$bin_path" ]; }; then
+            printf '%s\n' "$bin_path" > "$tool_backup/bin.path"
+            mv "$bin_path" "$tool_backup/bin" || exit
+            saved_bin=$tool_backup/bin
+        fi
+    fi
+    if [ -d "$dest" ]; then
+        [ -f "$dest/.dotfiles-managed" ] || { printf 'Refusing to replace unmanaged %s\n' "$dest" >&2; exit 1; }
+        mv "$dest" "$tmp/previous" || exit
+    fi
+    mv "$tmp/ready" "$dest" || exit
+    published=true
+    mv -f "$tmp/bin-link" "$bin_path" || exit
+    if [ -n "$active_path" ] && [ "$active_path" != "$bin_path" ]; then
+        ln -s "$dest/bin/$tool" "$active_path" || exit
+    fi
+    committed=true
+    if [ "$action" = adopt ]; then printf 'backup: %s\n' "$tool_backup"; fi
+    printf 'installed: %s\n' "$tool"
+)
+status=0
+for tool in "$@"; do
+    install_one "$tool" || status=1
+done
+exit "$status"

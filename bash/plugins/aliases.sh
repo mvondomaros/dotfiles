@@ -9,7 +9,11 @@ if command -v eza >/dev/null 2>&1; then
     alias st='ls --long --sort=time'
     alias str='ls --long --sort=time --reverse'
 else
-    alias ls='ls --color=auto --group-directories-first'
+    if [ "$(uname -s)" = Darwin ]; then
+        alias ls='ls -G'
+    else
+        alias ls='ls --color=auto --group-directories-first'
+    fi
     alias ll='ls -lh'
     alias la='ls -lha'
     alias l.='ls -lha -d .*'

@@ -1,0 +1,35 @@
+# command architecture sha256 official-release-url
+pixi x86_64 c81a16595e9e925fac3b12fe50cedbf415619a421ad2b72c1bba2a6ba6c2454a https://github.com/prefix-dev/pixi/releases/download/v0.84.1/pixi-x86_64-unknown-linux-musl.tar.gz
+pixi aarch64 0595613aedd95f84f90a55ba4b51fc1e4b86afb4eaa3e34ca3f3454d8f22c2e6 https://github.com/prefix-dev/pixi/releases/download/v0.84.1/pixi-aarch64-unknown-linux-musl.tar.gz
+lazygit x86_64 0a23f429a95f0d09db298b3c291536d818de066aa5a85c255806f0490ff6656b https://github.com/jesseduffield/lazygit/releases/download/v0.66.3/lazygit_0.66.3_linux_x86_64.tar.gz
+lazygit aarch64 ac0b48237f3d0283813e7154ec063237e519532feb0470c0881a1793ee78fd42 https://github.com/jesseduffield/lazygit/releases/download/v0.66.3/lazygit_0.66.3_linux_arm64.tar.gz
+rg x86_64 33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz
+rg aarch64 800b1e7206afe799dfb5a6901f23147cfaabe0e52210538100f61e86e1740915 https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-aarch64-unknown-linux-musl.tar.gz
+fd x86_64 7e2d07fa2b8807642aaec67b7e2972a9fbe4db26fcb340a7372392db42b26694 https://github.com/sharkdp/fd/releases/download/v10.5.2/fd-v10.5.2-x86_64-unknown-linux-musl.tar.gz
+fd aarch64 63ea52cb31586e6d98efa2f06d73d542f16c7d0c4af0f07b579aaf9714cf907a https://github.com/sharkdp/fd/releases/download/v10.5.2/fd-v10.5.2-aarch64-unknown-linux-musl.tar.gz
+atuin x86_64 54182762c9d91a4f779748f622749ff6963956db005feb13e62d037196b05618 https://github.com/atuinsh/atuin/releases/download/v18.24.5/atuin-x86_64-unknown-linux-musl.tar.gz
+atuin aarch64 b44b3f264652b847b2e524ec397aa498c13076ed75cf213239ed2b9a0de2f99d https://github.com/atuinsh/atuin/releases/download/v18.24.5/atuin-aarch64-unknown-linux-musl.tar.gz
+eza x86_64 e06eebab74b73d6b7d51a796a353824b001bea82df077706382e100815d28904 https://github.com/eza-community/eza/releases/download/v0.23.5/eza_x86_64-unknown-linux-musl.tar.gz
+starship x86_64 10c8eb4cb3b761d9bf59ea828444c2dab36c900b7d69a69e08814b286969df89 https://github.com/starship/starship/releases/download/v1.27.0/starship-x86_64-unknown-linux-musl.tar.gz
+starship aarch64 341f5cbf24699fa0b27ec88965ad25f862ea09e15d35a543fd6ffdff1d2aa00d https://github.com/starship/starship/releases/download/v1.27.0/starship-aarch64-unknown-linux-musl.tar.gz
+nvim x86_64 9e4a0e9c2aebbcf1eb5f6cdf645b460c9249f517650d0191170f9f152ecfd721 https://github.com/neovim/neovim-releases/releases/download/v0.12.5/nvim-linux-x86_64.tar.gz
+nvim aarch64 ea4f9a31b11cc1477ff014aebb7b207684e7280f94ffa97abdab6cacd9b98519 https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-arm64.tar.gz
+eza aarch64 40b87ae8628aa2ff0f0d2dc24ab52f689631366385c3da630bae745671fd71ec https://github.com/eza-community/eza/releases/download/v0.23.5/eza_aarch64-unknown-linux-gnu.tar.gz
+ruff x86_64 d1d6ec9ce1ce0c01e23532a157a677077ba1f82f7cd2cde6f0bd75e65f85df93 https://github.com/astral-sh/ruff/releases/download/0.17.4/ruff-x86_64-unknown-linux-musl.tar.gz
+ruff aarch64 71491cf93242d1bde15dcc628fd105f27c54738bef6b94050b9363ba6795f97e https://github.com/astral-sh/ruff/releases/download/0.17.4/ruff-aarch64-unknown-linux-musl.tar.gz
+ty x86_64 cae79385c6db78ecb62ff113edd02d8b79536849beb9771f43a5a68e1df7ca21 https://github.com/astral-sh/ty/releases/download/0.0.99/ty-x86_64-unknown-linux-musl.tar.gz
+ty aarch64 1aeb90425e934914f437f30ec7de6f5a55352aa858628903adb08a24a852191e https://github.com/astral-sh/ty/releases/download/0.0.99/ty-aarch64-unknown-linux-musl.tar.gz
+
+# Optional standalone editor tools (--editor).
+shfmt x86_64 76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64
+shfmt aarch64 5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489 https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_arm64
+shellcheck x86_64 b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6 https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz
+shellcheck aarch64 68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.aarch64.tar.gz
+stylua x86_64 48ee7db28346f96f4bd545e190ab080a88a7b5a664e97649cf5d5c60426f402d https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64-musl.zip
+stylua aarch64 278495597e3827417f3af7b9ad38011ad4a5ec725503553160ab69b7301059bb https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-aarch64-musl.zip
+texlab x86_64 8697bd5e479d4584b14b7eed5c320c80ec4e1d91ebefbb6801e6bf38e9971300 https://github.com/latex-lsp/texlab/releases/download/v5.26.0/texlab-x86_64-linux.tar.gz
+texlab aarch64 a85cdfcd22454b8d8550f4b0f0620c45ab51760f302fac7a12bc18a890f70f8c https://github.com/latex-lsp/texlab/releases/download/v5.26.0/texlab-aarch64-linux.tar.gz
+tinymist x86_64 bb9c73151dd16864f5bb2c426aa990de424985969bea54b5c4a7d5373cedcab2 https://github.com/Myriad-Dreamin/tinymist/releases/download/v0.15.12/tinymist-x86_64-unknown-linux-musl.tar.gz
+tinymist aarch64 9dfdd715cfa3e6636ba8e59df445bdbc70a45cdb6710d0ff3d61c4a948912db6 https://github.com/Myriad-Dreamin/tinymist/releases/download/v0.15.12/tinymist-aarch64-unknown-linux-musl.tar.gz
+typst x86_64 a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz
+typst aarch64 5aa8d74a3d906e60ea12a66ac2f37f8eef1b14cbad7182a745e393a10c23dcee https://github.com/typst/typst/releases/download/v0.15.1/typst-aarch64-unknown-linux-musl.tar.xz

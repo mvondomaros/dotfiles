@@ -1,25 +1,34 @@
 return {
 	"stevearc/conform.nvim",
+	cmd = { "ConformInfo" },
 	event = { "BufWritePre" },
 	opts = {
 		formatters_by_ft = {
-			bash = { "beautysh" },
+			sh = { "shfmt" },
+			bash = { "shfmt" },
 			fish = { "fish_indent" },
 			lua = { "stylua" },
-			python = { "ruff" },
+			python = { "ruff_format" },
 		},
-		format_on_save = {
-			timeout_ms = 500,
-			lsp_format = "fallback",
-		},
+		default_format_opts = { lsp_format = "fallback" },
+		format_on_save = function(buffer)
+			-- Preserve prose/TeX line breaks; format these explicitly when wanted.
+			if vim.tbl_contains({ "tex", "plaintex", "bib", "text", "markdown" }, vim.bo[buffer].filetype) then
+				return
+			end
+			local formatters, lsp = require("conform").list_formatters_to_run(buffer)
+			if #formatters > 0 or lsp then
+				return { timeout_ms = 1000, lsp_format = "fallback" }
+			end
+		end,
 	},
 	keys = {
 		{
-			"<leader>c",
+			"<leader>cf",
 			function()
 				require("conform").format({
 					async = true,
-					lsp_fallback = true,
+					lsp_format = "fallback",
 				})
 			end,
 			mode = { "n", "x" },
@@ -28,11 +37,6 @@ return {
 	},
 	config = function(_, opts)
 		require("conform").setup(opts)
-		vim.o.formatexpr = "v:conform.formatexpr()"
-	end,
-	config = function(_, opts)
-		require("conform").setup(opts)
-
-		vim.o.formatexpr = "v:conform.formatexpr()"
+		vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
 	end,
 }

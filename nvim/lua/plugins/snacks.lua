@@ -30,13 +30,7 @@ return {
 		local picker = require("snacks.picker")
 
 		local function project_root()
-			if Snacks.util and Snacks.util.root then
-				local ok, root = pcall(Snacks.util.root)
-				if ok and root and root ~= "" then
-					return root
-				end
-			end
-			return vim.fn.getcwd()
+			return vim.fs.root(0, ".git") or vim.fs.root(vim.fn.getcwd(), ".git") or vim.fn.getcwd()
 		end
 
 		return {

@@ -11,3 +11,7 @@
 	autoStash = true
 [merge]
 	ff = only
+
+# Optional private settings; missing include files are ignored by Git.
+[include]
+	path = ../dotfiles/local/gitconfig
