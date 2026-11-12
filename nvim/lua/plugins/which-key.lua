@@ -9,7 +9,6 @@ return {
 			{ "<leader>a", group = "agents" },
 			{ "<leader>b", group = "buffers" },
 			{ "<leader>c", group = "code" },
-			{ "<leader>d", group = "documents" },
 			{ "<leader>f", group = "files" },
 			{ "<leader>g", group = "git" },
 			{ "<leader>h", group = "help / history" },
@@ -19,5 +18,8 @@ return {
 			{ "<leader>w", group = "windows" },
 			{ "<leader>q", group = "quit" },
 		})
+		if require("config.role").typst then
+			wk.add({ { "<leader>d", group = "documents" } })
+		end
 	end,
 }

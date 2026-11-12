@@ -31,12 +31,19 @@ Default: fast-forward the current branch from its upstream and reapply config li
   --backup   Preserve and replace conflicting configuration files or old links.
 
 Use --editor for machines with the full Neovim setup. Profiles are explicit per run.
+The local server/workstation role controls Python and Typst tools within those profiles.
+Set it with install-dotfiles --role server (the default role is workstation).
 Git updates require a clean checkout and no unpublished or diverging commits.
 HELP
             exit 0 ;;
         *) printf 'Unknown option: %s\n' "$option" >&2; exit 2 ;;
     esac
 done
+# shellcheck source=/dev/null
+. "$repo_dir/tools/role.sh"
+DOTFILES_ROLE=$(dotfiles_read_role) || exit
+export DOTFILES_ROLE
+printf 'Role: %s\n' "$DOTFILES_ROLE"
 require_clean_checkout() {
     changes=$(git -C "$repo_dir" status --porcelain --untracked-files=normal --ignore-submodules=none)
     if [ -n "$changes" ]; then

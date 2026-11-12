@@ -235,6 +235,44 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertEqual((self.home / '.config/dotfiles/local/host').read_text(), 'marc3a\n')
         self.assertFalse((self.repo / 'dotfiles/local').exists())
 
+    def test_server_role_is_local_and_selects_only_server_tools(self):
+        self.install('--host', 'marc3a', '--role', 'server')
+        role = self.home / '.config/dotfiles/local/role'
+        self.assertEqual(role.read_text(), 'server\n')
+        self.install()
+        self.assertEqual(role.read_text(), 'server\n')
+        self.assertEqual((role.parent / 'host').read_text(), 'marc3a\n')
+        self.assertFalse((self.repo / 'dotfiles/local').exists())
+        def selected(*args):
+            output = self.run_command([str(self.repo / 'tools/install-tools'), '--check'] + list(args)).stdout
+            return {line.split()[0] for line in output.splitlines()[1:] if line and not line.startswith(' ')}
+        self.assertEqual(selected(), {'pixi', 'lazygit', 'rg', 'fd', 'atuin', 'eza', 'nvim', 'starship'})
+        self.assertEqual(selected('--editor'), {'shfmt', 'shellcheck', 'stylua', 'tree-sitter'})
+        self.assertEqual(selected('--agents'), {'codex', 'claude'})
+        override = self.run_command([str(self.repo / 'tools/install-tools'), '--check'], extra={'DOTFILES_ROLE': 'workstation'})
+        self.assertIn('ruff', override.stdout)
+        self.assertEqual(role.read_text(), 'server\n')
+        self.mock('uname', 'echo Darwin')
+        self.mock('brew', 'printf "%s\\n" "$*"')
+        mac = self.run_command([str(self.repo / 'tools/install-tools'), '--check']).stdout.split()
+        self.assertNotIn('ruff', mac)
+        self.assertNotIn('ty', mac)
+        mac_editor = self.run_command([str(self.repo / 'tools/install-tools'), '--editor', '--check']).stdout.split()
+        for tool in ['tinymist', 'typst', 'websocat']:
+            self.assertNotIn(tool, mac_editor)
+        self.install('--role', 'workstation')
+        mac = self.run_command([str(self.repo / 'tools/install-tools'), '--check']).stdout.split()
+        self.assertIn('ruff', mac)
+        self.assertIn('ty', mac)
+
+    def test_invalid_role_stops_provisioning(self):
+        self.run_command([str(self.repo / 'tools/install-dotfiles'), '--role', 'unknown'], code=2)
+        self.install('--role', 'server')
+        (self.home / '.config/dotfiles/local/role').write_text('unknown\n')
+        self.run_command([str(self.repo / 'tools/install-tools'), '--check'], code=1)
+        self.update_dotfiles('--no-pull', '--check', code=1)
+        self.assertFalse((self.home / '.local/share/dotfiles/tools').exists())
+
     def test_existing_files_preserved_and_backup(self):
         original = self.home / '.bashrc'
         original.write_text('# site settings\n')
@@ -702,6 +740,18 @@ exit 8''')
         self.assertEqual(lock.read_bytes(), original_lock, 'Adding a plugin changed existing pins')
         remote.rename(unavailable)
         self.assertIn('reuse: pinned Neovim plugins', self.run_command(setup).stdout)
+        self.install('--role', 'server')
+        server_lock = json.loads(lock.read_text())
+        server_lock['typst-preview.nvim'] = {'commit': '0' * 40}
+        lock.write_text(json.dumps(server_lock))
+        self.mock('git', 'case "$*" in *https://*) echo UNEXPECTED_NETWORK >&2; exit 9 ;; esac\nexec ' + shlex.quote(GIT) + ' "$@"')
+        self.run_command([NVIM, '--headless', '-u', 'NONE', '-i', 'NONE', '-l',
+                          str(self.repo / 'tools/restore-editor.lua'), str(self.repo)])
+        self.assertFalse((lazy_dir.parent / 'typst-preview.nvim').exists())
+        self.assertIn('reuse: pinned Neovim plugins', self.run_command(setup).stdout)
+        self.run_command([NVIM, '--headless', '-u', 'NONE', '-i', 'NONE', '-l',
+                          str(self.repo / 'tools/check-editor.lua'), str(lock)], code=1,
+                         extra={'DOTFILES_ROLE': 'workstation'})
 
     @unittest.skipUnless(NVIM, 'Neovim unavailable')
     def test_neovim_offline_basic_and_modern_fallback(self):
@@ -741,7 +791,7 @@ call assert_equal(1, g:loaded_spellfile_plugin)
 call assert_equal('', v:errmsg)
 if !empty(v:errors)
   call writefile(v:errors, $DOTFILES_VIM_TEST_DIR . '/errors.txt')
-  cquit 1
+  cquit
 endif
 qa!
 ''')

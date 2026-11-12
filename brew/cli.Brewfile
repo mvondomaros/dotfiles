@@ -9,9 +9,10 @@ brew "neovim"
 brew "pixi"
 brew "ripgrep"
 brew "rsync"
-brew "ruff"
 brew "starship"
-brew "ty"
 cask "kitty"
 cask "font-fira-code"
 cask "font-powerline-symbols"
+if ENV.fetch("DOTFILES_ROLE", "workstation") == "workstation"
+  eval File.read(File.join(__dir__, "python.Brewfile"))
+end

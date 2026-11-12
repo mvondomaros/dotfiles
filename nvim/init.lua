@@ -15,14 +15,17 @@ if vim.fn.has("nvim-0.12") == 0 or vim.env.DOTFILES_NVIM_MODE == "basic" then
 	return
 end
 require("config.options")
+local role = require("config.role")
 require("config.lsp")
-require("config.python")
+if role.python then
+	require("config.python")
+end
 require("config.lint")
 local data = vim.fn.stdpath("data") .. "/lazy/"
 local complete = true
 local lock = vim.json.decode(table.concat(vim.fn.readfile(vim.fn.stdpath("config") .. "/lazy-lock.json"), "\n"))
 for name in pairs(lock) do
-	if vim.fn.isdirectory(data .. name) == 0 then
+	if role.plugin_enabled(name) and vim.fn.isdirectory(data .. name) == 0 then
 		complete = false
 		break
 	end
@@ -33,5 +36,7 @@ if complete or vim.env.DOTFILES_NVIM_SETUP == "1" then
 end
 require("config.autocommands")
 require("config.keymaps")
-require("config.documents")
+if role.typst then
+	require("config.documents")
+end
 require("config.agents")

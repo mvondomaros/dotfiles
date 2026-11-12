@@ -5,16 +5,19 @@ repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 config_home=${XDG_CONFIG_HOME:-$HOME/.config}
 backup=false
 host=
+role=
 while [ "$#" -gt 0 ]; do
     case $1 in
         --host) [ "$#" -ge 2 ] || exit 2; host=$2; shift ;;
+        --role) [ "$#" -ge 2 ] || exit 2; role=$2; shift ;;
         --backup) backup=true ;;
-        --help) printf 'Usage: %s [--host NAME] [--backup]\n' "$0"; exit 0 ;;
+        --help) printf 'Usage: %s [--host NAME] [--role workstation|server] [--backup]\n' "$0"; exit 0 ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
 done
 case $host in *[!a-zA-Z0-9_-]*) printf 'Invalid host name\n' >&2; exit 2 ;; esac
+case $role in ''|workstation|server) ;; *) printf 'Invalid role: %s\n' "$role" >&2; exit 2 ;; esac
 backup_dir=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups/$(date +%Y%m%d-%H%M%S)-$$
 backup_file() {
     relative=${1#"$HOME"/}
@@ -72,6 +75,14 @@ link_file "$config_home/bash/bash_profile" "$HOME/.bash_profile"
 link_file "$config_home/vimrc" "$HOME/.vimrc"
 if [ -n "$host" ]; then
     printf '%s\n' "$host" > "$config_home/dotfiles/local/host"
+fi
+if [ -n "$role" ]; then
+    role_temp=$(mktemp "$config_home/dotfiles/local/.role.XXXXXX")
+    trap 'rm -f "$role_temp"' EXIT HUP INT TERM
+    printf '%s\n' "$role" > "$role_temp"
+    mv "$role_temp" "$config_home/dotfiles/local/role"
+    trap - EXIT HUP INT TERM
+    printf 'role: %s\n' "$role"
 fi
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/vim/undo"
 printf '\nConfiguration installed. Packages and login shells were not changed.\n'

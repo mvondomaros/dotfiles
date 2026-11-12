@@ -2,6 +2,8 @@
 -- from existing checkouts before its restore command runs during a migration.
 local ok, err = xpcall(function()
 	local repo = assert(arg[1])
+	vim.opt.rtp:prepend(repo .. "/nvim")
+	local role = require("config.role")
 	local lock = vim.json.decode(table.concat(vim.fn.readfile(repo .. "/nvim/lazy-lock.json"), "\n"))
 	local sources = { ["lazy.nvim"] = "folke/lazy.nvim" }
 	for _, file in ipairs(vim.fn.glob(repo .. "/nvim/lua/plugins/*.lua", false, true)) do
@@ -15,18 +17,24 @@ local ok, err = xpcall(function()
 	local data = vim.fn.stdpath("data") .. "/lazy/"
 	vim.fn.mkdir(data, "p")
 	for _, name in ipairs(vim.fn.sort(vim.tbl_keys(lock))) do
-		local path, commit = data .. name, lock[name].commit
-		local source = assert(sources[name], "No plugin source configured for " .. name)
-		if not vim.uv.fs_stat(path .. "/.git") then
-			assert(
-				git({ "clone", "--filter=blob:none", "--no-checkout", "https://github.com/" .. source .. ".git", path })
-			)
+		if role.plugin_enabled(name) then
+			local path, commit = data .. name, lock[name].commit
+			local source = assert(sources[name], "No plugin source configured for " .. name)
+			if not vim.uv.fs_stat(path .. "/.git") then
+				assert(git({
+					"clone",
+					"--filter=blob:none",
+					"--no-checkout",
+					"https://github.com/" .. source .. ".git",
+					path,
+				}))
+			end
+			if not git({ "-C", path, "cat-file", "-e", commit .. "^{commit}" }) then
+				assert(git({ "-C", path, "fetch", "--filter=blob:none", "--depth=1", "origin", commit }))
+			end
+			assert(git({ "-C", path, "checkout", "--detach", commit }))
+			print("ready: " .. name)
 		end
-		if not git({ "-C", path, "cat-file", "-e", commit .. "^{commit}" }) then
-			assert(git({ "-C", path, "fetch", "--filter=blob:none", "--depth=1", "origin", commit }))
-		end
-		assert(git({ "-C", path, "checkout", "--detach", commit }))
-		print("ready: " .. name)
 	end
 end, debug.traceback)
 if not ok then

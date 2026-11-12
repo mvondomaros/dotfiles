@@ -38,6 +38,10 @@ requested=$*
 for tool in "$@"; do
     case $tool in pixi|lazygit|rg|fd|atuin|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|tinymist|typst|tree-sitter|websocat|codex|claude|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
 done
+# shellcheck source=/dev/null
+. "$repo_dir/tools/role.sh"
+DOTFILES_ROLE=$(dotfiles_read_role) || exit
+export DOTFILES_ROLE
 if [ "$(uname -s)" = Darwin ]; then
     if [ "$adopt" = true ]; then
         printf 'Adoption is Linux-only; macOS tools are managed by Homebrew.\n' >&2; exit 2
@@ -51,7 +55,14 @@ if [ "$(uname -s)" = Darwin ]; then
     command -v brew >/dev/null 2>&1 || { printf 'Install Homebrew first: https://brew.sh\n' >&2; exit 1; }
     if [ "$check" = true ]; then
         if [ -z "$requested" ]; then
-            set -- $(awk -F '"' '/^(brew|cask) / { print $2 }' "$repo_dir/brew/$profile.Brewfile")
+            set -- "$repo_dir/brew/$profile.Brewfile"
+            if [ "$DOTFILES_ROLE" = workstation ]; then
+                case $profile in
+                    cli) set -- "$@" "$repo_dir/brew/python.Brewfile" ;;
+                    editor) set -- "$@" "$repo_dir/brew/typst.Brewfile" ;;
+                esac
+            fi
+            set -- $(awk -F '"' '/^(brew|cask) / { print $2 }' "$@")
         else
             formulae=
             for tool in "$@"; do
@@ -98,11 +109,13 @@ bin_dir=$HOME/.local/bin
 store=${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/tools
 if [ -z "$requested" ]; then
     if [ "$profile" = editor ]; then
-        set -- shfmt shellcheck stylua tree-sitter tinymist typst websocat
+        set -- shfmt shellcheck stylua tree-sitter
+        if [ "$DOTFILES_ROLE" = workstation ]; then set -- "$@" tinymist typst websocat; fi
     elif [ "$profile" = agents ]; then
         set -- codex claude
     else
-        set -- pixi lazygit rg fd atuin eza nvim starship ruff ty
+        set -- pixi lazygit rg fd atuin eza nvim starship
+        if [ "$DOTFILES_ROLE" = workstation ]; then set -- "$@" ruff ty; fi
     fi
 fi
 real_home=$(CDPATH= cd -- "$HOME" && pwd -P)

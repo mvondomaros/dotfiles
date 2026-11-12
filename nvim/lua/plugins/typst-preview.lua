@@ -1,5 +1,6 @@
 return {
 	"chomosuke/typst-preview.nvim",
+	enabled = require("config.role").typst,
 	ft = "typst",
 	opts = {
 		-- Use the explicit installer/updater, never plugin-managed downloads.

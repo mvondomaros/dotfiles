@@ -72,12 +72,16 @@ local ok, err = xpcall(function()
 	lint("Missing end")
 	vim.bo.modified = false
 
-	edit("sample.py", 'print("clean disk file")')
-	vim.api.nvim_buf_set_lines(0, 0, -1, false, { "import os" })
-	lint("F401")
-	vim.bo.modified = false
+	if require("config.role").python then
+		edit("sample.py", 'print("clean disk file")')
+		vim.api.nvim_buf_set_lines(0, 0, -1, false, { "import os" })
+		lint("F401")
+		vim.bo.modified = false
+	else
+		print("SKIP: Python tooling disabled for server role")
+	end
 
-	if vim.fn.executable("tinymist") == 1 then
+	if require("config.role").typst and vim.fn.executable("tinymist") == 1 then
 		edit("sample.typ", "#let value=1\n#missing_name")
 		local typst = attached("tinymist")
 		assert(vim.wo.wrap and vim.wo.spell)
@@ -92,13 +96,11 @@ local ok, err = xpcall(function()
 		assert(not vim.uv.fs_stat(scratch .. "/sample.pdf"), "Unexpected PDF export")
 		assert(typst.config.settings.exportPdf == "never")
 	else
-		print("SKIP: workstation Typst tooling unavailable")
+		print("SKIP: Typst tooling disabled or unavailable")
 	end
 
 	assert(vim.v.errmsg == "", vim.v.errmsg)
-	print(
-		"PASS: language servers, Typst diagnostics, formatting, bilingual spelling, unsaved-buffer lint, and Typst preview tools"
-	)
+	print("PASS: enabled language features, formatting, bilingual spelling, and unsaved-buffer lint")
 end, debug.traceback)
 for _, client in ipairs(vim.lsp.get_clients()) do
 	client:stop(true)

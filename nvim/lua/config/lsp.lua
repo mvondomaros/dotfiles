@@ -15,12 +15,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 local servers = {
-	tinymist = {
-		cmd = { "tinymist" },
-		filetypes = { "typst" },
-		root_markers = { "typst.toml", ".git" },
-		settings = { formatterMode = "typstyle", exportPdf = "never" },
-	},
 	bashls = {
 		cmd = { "bash-language-server", "start" },
 		filetypes = { "sh", "bash" },
@@ -33,6 +27,14 @@ local servers = {
 		root_markers = { "config.fish", ".git" },
 	},
 }
+if require("config.role").typst then
+	servers.tinymist = {
+		cmd = { "tinymist" },
+		filetypes = { "typst" },
+		root_markers = { "typst.toml", ".git" },
+		settings = { formatterMode = "typstyle", exportPdf = "never" },
+	}
+end
 for name, config in pairs(servers) do
 	if vim.fn.executable(config.cmd[1]) == 1 then
 		vim.lsp.config(name, config)

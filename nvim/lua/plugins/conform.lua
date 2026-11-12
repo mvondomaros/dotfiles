@@ -8,7 +8,7 @@ return {
 			bash = { "shfmt" },
 			fish = { "fish_indent" },
 			lua = { "stylua" },
-			python = { "ruff_format" },
+			python = require("config.role").python and { "ruff_format" } or nil,
 		},
 		default_format_opts = { lsp_format = "fallback" },
 		format_on_save = function(buffer)

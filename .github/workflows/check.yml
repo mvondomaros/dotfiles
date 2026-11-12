@@ -79,4 +79,5 @@ jobs:
           tools/setup-editor --parsers
           nvim --headless -i NONE -c "lua dofile('tests/check_nvim.lua')"
           nvim --headless -i NONE -c "lua dofile('tests/check_workflows.lua')"
+          DOTFILES_ROLE=server nvim --headless -i NONE -c "lua dofile('tests/check_server.lua')"
           git diff --exit-code -- nvim/lazy-lock.json

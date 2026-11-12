@@ -5,6 +5,10 @@ vim.api.nvim_create_user_command("Lint", function()
 	local filename = vim.api.nvim_buf_get_name(buffer)
 	local command
 	if filetype == "python" then
+		if not require("config.role").python then
+			vim.notify("Python tooling is disabled in the server role", vim.log.levels.INFO)
+			return
+		end
 		command = {
 			"ruff",
 			"check",

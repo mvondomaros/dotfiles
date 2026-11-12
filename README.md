@@ -12,7 +12,7 @@ neither the shell nor the Vim fallback needs a submodule.
 
 ```sh
 git clone https://github.com/mvondomaros/dotfiles.git ~/.config
-~/.config/tools/install-dotfiles --host marc3a
+~/.config/tools/install-dotfiles --host marc3a --role server
 ```
 
 If `~/.config` already exists, keep it and clone somewhere else, then run that
@@ -48,6 +48,35 @@ only. Interactive hooks run after shared aliases/editor defaults, and before
 prompt/history integrations, so private aliases and settings take precedence. To customize an application, use its
 native configuration or select another config through its environment variable
 in an environment hook; there is no generated configuration/merge framework.
+
+Each home directory also selects a role with an ignored
+`$XDG_CONFIG_HOME/dotfiles/local/role` file. Use the installer to set it:
+
+```sh
+~/.config/tools/install-dotfiles --role server
+# For a workstation (also the default when no role file exists):
+~/.config/tools/install-dotfiles --role workstation
+```
+
+| Role | Shared shell/editor/agent tools | Python tooling | Typst tooling |
+| --- | --- | --- | --- |
+| `server` | Available through the usual profiles | Excluded | Excluded |
+| `workstation` | Available through the usual profiles | Ruff/ty and Python editing | Typst/Tinymist/preview |
+
+The role controls both provisioning and Neovim integration, including plugins,
+language servers, formatters, lint commands, parser selection, and health checks.
+`--all` applies all profiles appropriate to that role. Existing installations
+without a role file retain workstation behavior. `DOTFILES_ROLE=server` or
+`DOTFILES_ROLE=workstation` overrides the file for a single session or command.
+There is no central hostname inventory: an NFS-shared cluster home needs only
+one role setting for all its nodes. The separate host selector below continues
+to choose cluster-specific environment settings.
+
+Role changes do not automatically uninstall existing programs. Only the selected
+tools are installed/updated, and disabled editor integrations stay inactive even
+if their executables are still on PATH. Project environments and system Python
+are independent of these editor roles. Pixi remains available on servers as the
+package manager used to provision the native Tree-sitter generator.
 
 `install-dotfiles --host NAME` writes a private selector to
 `dotfiles/local/host`. Selection is explicit, not based on a compute node's
@@ -96,6 +125,10 @@ On macOS, install [Homebrew](https://brew.sh) first. The command applies
 `brew/cli.Brewfile`: Pixi, Ruff, ty, lazygit, ripgrep, rsync, fd, Atuin, eza, Neovim, Starship,
 Git, Fish, fzf, Kitty, and terminal fonts. Existing packages are not upgraded by
 default. Kitty launches Fish; changing the account's login shell is unnecessary.
+
+Ruff and ty come from the included `brew/python.Brewfile` on workstations;
+the server role excludes that file. Linux CLI core likewise contains ten tools
+on workstations and eight on servers.
 `brew/workstation.Brewfile` holds optional desktop/scientific applications; the
 legacy `brew/brewfile` combines CLI, editor, and workstation dependencies when a
 full workstation is wanted.
@@ -167,7 +200,7 @@ only the selected Brewfile profile or explicitly selected packages. The private
 Tree-sitter environment is replaced together with its managed generator;
 user Pixi environments and unrelated Homebrew packages are not upgraded.
 
-`--adopt-all` covers only the ten CLI tools listed in the Linux manifest; it
+`--adopt-all` covers the selected CLI core (ten tools on workstations, eight on servers); it
 is not a scan of everything installed in your account. `--adopt TOOL ...` selects
 a subset. Adoption is Linux-only: eligible executables must be user-owned and
 resolve inside `~/.local/bin`, `~/.pixi/bin`, or `~/.opt`. System/module paths and
@@ -175,7 +208,8 @@ symlinks to them are protected. Newer-than-pinned versions are retained rather
 than downgraded. `--check` reports installed/pinned versions, ownership, and the
 planned action without installing tools. On macOS it uses `brew outdated` and
 preserves Homebrew's exit status (which may be nonzero when updates exist).
-With `--editor --adopt-all`, the selected set is the seven Linux editor tools;
+With `--editor --adopt-all`, the selected set is seven Linux editor tools on
+workstations or four on servers;
 `--agents --adopt-all` selects the two coding agents.
 
 Adoption first downloads, verifies, and runs the replacement, then backs up the
@@ -193,12 +227,15 @@ installed record. Updating pins/checksums remains an explicit repository change.
 
 ## Python toolchain
 
-The global core is Pixi (project environments/dependencies), Ruff (linting and
+On workstations, the global core is Pixi (project environments/dependencies), Ruff (linting and
 formatting), and ty (type checking and Python language features). macOS uses
 Homebrew; Linux uses the same verified standalone-release installer as the other
 CLI tools. No global Python environment, uv, pipx, or additional type checker is
 installed by core. Existing projects that explicitly require another manager can
 keep it as a host/project exception until migrated.
+
+The server role excludes Ruff/ty and Python LSP, formatting, and linting. The
+following Python workflow and validation commands apply to workstations.
 
 Neovim starts ty when available and uses Ruff through Conform for formatting.
 There is one semantic Python language server and one formatting provider; Ruff
@@ -254,7 +291,7 @@ Shared mnemonic keys use **subject + action** after Space:
 | `qa` | Quit all | Quit all, confirming unsaved edits | Same |
 
 The focused plugin set is Ayu, Snacks (files/search/explorer/terminals),
-Which-key, Gitsigns, Conform, modern Tree-sitter, and Typst Preview, managed by
+Which-key, Gitsigns, Conform, and modern Tree-sitter; workstations also use Typst Preview. Plugins are managed by
 Lazy. Native Neovim supplies LSP, completion, snippets, commenting, diagnostics,
 and buffer navigation. There is no second completion framework, editor package
 manager, LaTeX integration, dashboard, or animation layer.
@@ -269,8 +306,9 @@ Provision tools, plugins, and parsers explicitly:
 ```
 
 `--editor` installs shfmt, ShellCheck, StyLua, Tree-sitter CLI, Tinymist, Typst,
-and websocat on Linux. macOS also installs the Bash and Fish language servers.
-Python's Pixi/Ruff/ty stack belongs to CLI core. Node and Fish language servers
+and websocat on Linux workstations. Servers select only shfmt, ShellCheck,
+StyLua, and Tree-sitter CLI. macOS also installs the Bash and Fish language servers.
+Workstation Python tools belong to CLI core. Node and Fish language servers
 on Linux are optional existing site tools. No TeX distribution or PDF viewer
 is installed. Both platforms use the same parsers and keybindings.
 
@@ -296,7 +334,8 @@ Updates use the same profiles:
 Tree-sitter uses its current `main` API with a global generator (0.26.1+) and a C
 compiler. Linux provisions the generator through an isolated Pixi environment;
 macOS uses Homebrew's `tree-sitter-cli`. The shared parser set covers Bash, Fish, Lua, Python, JSON, Markdown,
-regular expressions, TOML, YAML, and Typst. Setup preserves legacy parser directories in
+regular expressions, TOML, YAML, and Typst. Servers omit Python and Typst, using
+nine shared parsers instead of eleven. Setup preserves legacy parser directories in
 `$XDG_STATE_HOME/dotfiles/backups/parsers-*` before compiling the shared set.
 Additional grammars can be installed explicitly with `:TSInstall LANGUAGE`.
 Missing grammars retain built-in syntax and indent folds.
@@ -309,6 +348,8 @@ Tab/Shift-Tab move through an active native snippet. `[b` and `]b` switch buffer
 
 Press Space and pause to discover grouped commands. Neovim adds these mnemonic
 bindings to the common fallback keys above:
+
+Document bindings apply to the workstation role.
 
 | Key | Action |
 | --- | --- |
@@ -398,8 +439,7 @@ and [Claude Code theme documentation](https://code.claude.com/docs/en/terminal-c
 
 ## Maintenance and verification
 
-After these changes have been committed and pushed, machines running the
-starting revision (`b4dcc97`) can migrate in place. Close editor sessions first
+Machines running the starting revision (`b4dcc97`) can migrate in place. Close editor sessions first
 so an old process does not load a mixture of plugin versions during the update.
 Use the actual checkout path if it lives outside `~/.config`:
 
@@ -408,6 +448,13 @@ cd ~/.config
 git status --short
 # Resolve tracked/untracked changes before pulling; keep private overrides in dotfiles/local/.
 git -c submodule.recurse=false pull --ff-only
+```
+
+Before provisioning, select the role. On a server use
+`./tools/install-dotfiles --role server --backup`; on a workstation the default
+is suitable, or set `--role workstation` explicitly. Then run:
+
+```sh
 ./tools/update-dotfiles --no-pull --backup --all
 ```
 
@@ -420,7 +467,8 @@ and `dotfiles/local/` files are retained; there is no need to repeat `--host`.
 
 `--tools` updates CLI core and regenerates cached completions. `--editor` updates
 Neovim and editor dependencies, restores the exact plugin commits, and compiles
-the shared parsers. Old parser directories are preserved in state backups.
+the role's shared parsers. Server roles omit Python and Typst at both stages.
+Old parser directories are preserved in state backups.
 `--agents` updates the two optional coding CLIs; native login/configuration and
 the separately applied agent themes remain as described above. Omit
 `--editor`/`--agents` on machines where those features are not wanted. The removed
@@ -454,6 +502,7 @@ that machine:
 
 `--all` selects CLI core, editor, and agents together; `--backup` remains a
 separate choice for replacing conflicting configuration entries with backups.
+The selected role determines whether Python and Typst belong to those profiles.
 The default updates Git and reapplies configuration links. Profiles are explicit
 on each invocation; include `--editor` whenever refreshing a provisioned full
 Neovim setup. Git uses the current branch's configured upstream and requires a
@@ -491,6 +540,8 @@ nvim --headless -i NONE -c "lua dofile('tests/check_nvim.lua')"
 nvim --headless -i NONE -c "lua dofile('tests/check_languages.lua')"
 # Real Typst build/preview; agent launches are mocked:
 nvim --headless -i NONE -c "lua dofile('tests/check_workflows.lua')"
+# Server role: verify Python/Typst stay inactive even if the tools are installed:
+DOTFILES_ROLE=server nvim --headless -i NONE -c "lua dofile('tests/check_server.lua')"
 ```
 
 The editor check uses and removes its own temporary files.

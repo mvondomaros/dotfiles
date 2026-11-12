@@ -1,8 +1,14 @@
 -- Explicit provisioning with the modern Tree-sitter API, shared on all platforms.
 local ok, err = xpcall(function()
 	require("lazy").load({ plugins = { "nvim-treesitter" } })
-	local languages =
-		{ "bash", "fish", "lua", "python", "json", "markdown", "markdown_inline", "regex", "toml", "yaml", "typst" }
+	local role = require("config.role")
+	local languages = { "bash", "fish", "lua", "json", "markdown", "markdown_inline", "regex", "toml", "yaml" }
+	if role.python then
+		languages[#languages + 1] = "python"
+	end
+	if role.typst then
+		languages[#languages + 1] = "typst"
+	end
 	assert(vim.fn.executable("tree-sitter") == 1, "Install the parser generator with tools/install-tools --editor")
 	-- The old master branch stored parsers inside its plugin checkout. Preserve
 	-- them outside runtimepath so stale grammars cannot shadow the new install.
