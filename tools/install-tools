@@ -1,5 +1,5 @@
 #!/bin/sh
-# Reuse working tools; install verified standalone releases only when missing.
+# Reuse working tools; install verified releases only when missing.
 set -u
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 update=false
@@ -13,9 +13,11 @@ while [ "$#" -gt 0 ]; do
         --check) check=true ;;
         --adopt) adopt=true ;;
         --adopt-all) adopt=true; adopt_all=true ;;
-        --editor) profile=editor ;;
+        --editor|--agents)
+            [ "$profile" = cli ] || { printf 'Choose one tool profile per command.\n' >&2; exit 2; }
+            profile=${1#--} ;;
         --help)
-            printf 'Usage: %s [--editor] [--update] [--check] [--adopt TOOL ... | --adopt-all] [TOOL ...]\n' "$0"
+            printf 'Usage: %s [--editor | --agents] [--update] [--check] [--adopt TOOL ... | --adopt-all] [TOOL ...]\n' "$0"
             exit 0 ;;
         --) shift; break ;;
         -*) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
@@ -23,8 +25,8 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
-if [ "$profile" = editor ] && [ "$#" -gt 0 ]; then
-    printf '%s\n' '--editor takes no tool names.' >&2; exit 2
+if [ "$profile" != cli ] && [ "$#" -gt 0 ]; then
+    printf '%s takes no tool names.\n' "--$profile" >&2; exit 2
 fi
 if [ "$adopt_all" = true ] && [ "$#" -gt 0 ]; then
     printf '%s\n' '--adopt-all takes no tool names.' >&2; exit 2
@@ -34,7 +36,7 @@ if [ "$adopt" = true ] && [ "$adopt_all" = false ] && [ "$#" -eq 0 ]; then
 fi
 requested=$*
 for tool in "$@"; do
-    case $tool in pixi|lazygit|rg|fd|atuin|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|texlab|tinymist|typst|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
+    case $tool in pixi|lazygit|rg|fd|atuin|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|tinymist|typst|tree-sitter|websocat|codex|claude|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
 done
 if [ "$(uname -s)" = Darwin ]; then
     if [ "$adopt" = true ]; then
@@ -53,7 +55,7 @@ if [ "$(uname -s)" = Darwin ]; then
         else
             formulae=
             for tool in "$@"; do
-                case $tool in rg) tool=ripgrep ;; nvim) tool=neovim ;; esac
+                case $tool in rg) tool=ripgrep ;; nvim) tool=neovim ;; tree-sitter) tool=tree-sitter-cli ;; claude) tool=claude-code ;; esac
                 formulae="$formulae $tool"
             done
             set -- $formulae
@@ -68,13 +70,18 @@ if [ "$(uname -s)" = Darwin ]; then
         exec brew bundle --no-upgrade --file="$repo_dir/brew/$profile.Brewfile"
     fi
     for tool in "$@"; do
-        case $tool in rg) formula=ripgrep ;; nvim) formula=neovim ;; *) formula=$tool ;; esac
-        if [ "$update" = true ] && brew list --formula "$formula" >/dev/null 2>&1; then
-            brew upgrade "$formula" || exit
-        elif brew list --formula "$formula" >/dev/null 2>&1; then
+        kind=--formula
+        case $tool in
+            rg) formula=ripgrep ;; nvim) formula=neovim ;; tree-sitter) formula=tree-sitter-cli ;;
+            codex) formula=codex; kind=--cask ;; claude) formula=claude-code; kind=--cask ;;
+            *) formula=$tool ;;
+        esac
+        if [ "$update" = true ] && brew list "$kind" "$formula" >/dev/null 2>&1; then
+            brew upgrade "$kind" "$formula" || exit
+        elif brew list "$kind" "$formula" >/dev/null 2>&1; then
             printf 'reuse: %s (Homebrew)\n' "$formula"
         else
-            brew install "$formula" || exit
+            brew install "$kind" "$formula" || exit
         fi
     done
     exit 0
@@ -91,7 +98,9 @@ bin_dir=$HOME/.local/bin
 store=${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/tools
 if [ -z "$requested" ]; then
     if [ "$profile" = editor ]; then
-        set -- shfmt shellcheck stylua
+        set -- shfmt shellcheck stylua tree-sitter tinymist typst websocat
+    elif [ "$profile" = agents ]; then
+        set -- codex claude
     else
         set -- pixi lazygit rg fd atuin eza nvim starship ruff ty
     fi
@@ -145,7 +154,10 @@ install_one() (
     release=$(awk -v tool="$tool" -v arch="$arch" '$1 == tool && $2 == arch { print $3, $4; exit }' "$repo_dir/tools/linux-releases.txt")
     digest=${release%% *}
     url=${release#* }
-    target=$(printf '%s\n' "$url" | sed -n 's|.*/download/v\{0,1\}\([0-9][^/]*\)/.*|\1|p')
+    target=$(printf '%s\n' "$url" | sed -n \
+        -e 's|.*/download/\(rust-\)\{0,1\}v\{0,1\}\([0-9][^/]*\)/.*|\2|p' \
+        -e 's|.*/tree-sitter-cli-\([0-9][^-]*\)-[^/]*\.conda$|\1|p' \
+        -e 's|https://downloads.claude.ai/claude-code-releases/\([0-9][^/]*\)/.*|\1|p')
     expected=$(printf '%s\n%s' "$url" "$digest")
     action=install
     if [ "$working" = true ]; then
@@ -207,10 +219,12 @@ install_one() (
     bin_path=$(CDPATH= cd -- "$bin_dir" && pwd -P)/$tool
     saved_active=
     saved_bin=
+    pixi_home=
     cleanup() {
         code=$?
         trap - EXIT HUP INT TERM
         if [ "$committed" = false ]; then
+            [ -z "$pixi_home" ] || rm -rf "$pixi_home"
             if [ "$published" = true ] && [ "$owner" != managed ]; then
                 for path in "$bin_path" "$active_path"; do
                     [ -n "$path" ] || continue
@@ -232,9 +246,13 @@ install_one() (
         *.tar.gz) suffix=.tar.gz ;;
         *.tar.xz) suffix=.tar.xz ;;
         *.zip) suffix=.zip ;;
+        *.conda) suffix=.conda ;;
+        *.gz) suffix=.gz ;;
         *) suffix= ;;
     esac
     archive=$tmp/archive$suffix
+    # Pixi identifies local Conda packages by their canonical filename.
+    if [ "$suffix" = .conda ]; then archive=$tmp/${url##*/}; fi
     if [ -n "${DOTFILES_DOWNLOAD_DIR:-}" ] && [ -f "$DOTFILES_DOWNLOAD_DIR/$tool-$arch$suffix" ]; then
         cp "$DOTFILES_DOWNLOAD_DIR/$tool-$arch$suffix" "$archive" || exit
     else
@@ -249,24 +267,58 @@ install_one() (
         printf 'No SHA-256 verifier available.\n' >&2; exit 1
     fi
     [ "${actual%% *}" = "$digest" ] || { printf 'Checksum mismatch for %s\n' "$tool" >&2; exit 1; }
-    mkdir "$tmp/unpack"
-    case $suffix in
-        .tar.gz) tar -xzf "$archive" -C "$tmp/unpack" || exit ;;
-        .tar.xz) tar -xJf "$archive" -C "$tmp/unpack" || exit ;;
-        .zip) unzip -q "$archive" -d "$tmp/unpack" || exit ;;
-        '') cp "$archive" "$tmp/unpack/$tool" || exit ;;
-    esac
-    binary=$(find "$tmp/unpack" -type f -name "$tool" | head -n 1)
-    [ -n "$binary" ] || { printf 'Missing executable: %s\n' "$tool" >&2; exit 1; }
-    chmod u+x "$binary"
-    "$binary" --version >/dev/null 2>&1 || { printf 'skip: %s is incompatible; retain fallback tools.\n' "$tool" >&2; exit 1; }
-    if [ "$tool" = nvim ]; then
-        # Neovim needs its runtime files alongside the executable.
-        "$binary" --headless -u NONE -i NONE +qa || exit
-        mv "$(dirname "$(dirname "$binary")")" "$tmp/ready" || exit
-    else
+    if [ "$tool" = tree-sitter ] && [ "$suffix" = .conda ]; then
+        # Upstream Linux binaries require a newer glibc than the clusters.
+        # Isolate the compatible conda-forge build and its C runtime; neither
+        # the user's Pixi globals nor project environments are modified.
+        if ! command -v pixi >/dev/null 2>&1; then "$repo_dir/tools/install-tools" pixi || exit; fi
+        pixi_home=$(mktemp -d "$store/.tree-sitter.XXXXXX") || exit
+        PIXI_HOME="$pixi_home" PIXI_CACHE_DIR="$tmp/pixi-cache" \
+            pixi global install --environment generator --expose tree-sitter \
+            --path "$archive" --channel conda-forge || exit
+        "$pixi_home/bin/tree-sitter" --version >/dev/null 2>&1 || { printf 'Tree-sitter is incompatible; retaining existing tools.\n' >&2; exit 1; }
         mkdir -p "$tmp/ready/bin"
-        mv "$binary" "$tmp/ready/bin/$tool" || exit
+        ln -s "$pixi_home/bin/tree-sitter" "$tmp/ready/bin/tree-sitter" || exit
+        printf '%s\n' "$pixi_home" > "$tmp/ready/.pixi-home"
+    else
+        mkdir "$tmp/unpack"
+        case $suffix in
+            .tar.gz) tar -xzf "$archive" -C "$tmp/unpack" || exit ;;
+            .tar.xz) tar -xJf "$archive" -C "$tmp/unpack" || exit ;;
+            .zip) unzip -q "$archive" -d "$tmp/unpack" || exit ;;
+            .gz) gzip -dc "$archive" > "$tmp/unpack/$tool" || exit ;;
+            .conda) printf 'Unsupported Conda package for %s\n' "$tool" >&2; exit 1 ;;
+            '') cp "$archive" "$tmp/unpack/$tool" || exit ;;
+        esac
+        binary=$(find "$tmp/unpack" -type f -name "$tool" | head -n 1)
+        [ -n "$binary" ] || { printf 'Missing executable: %s\n' "$tool" >&2; exit 1; }
+        chmod u+x "$binary"
+        "$binary" --version >/dev/null 2>&1 || { printf 'skip: %s is incompatible; retain fallback tools.\n' "$tool" >&2; exit 1; }
+        if [ "$tool" = nvim ]; then
+            # Neovim needs its runtime files alongside the executable.
+            "$binary" --headless -u NONE -i NONE +qa || exit
+            mv "$(dirname "$(dirname "$binary")")" "$tmp/ready" || exit
+        elif [ "$tool" = codex ]; then
+            # Preserve Codex's relative helper binaries, sandbox, and resources.
+            [ -x "$tmp/unpack/bin/codex" ] || { printf 'Invalid Codex package layout\n' >&2; exit 1; }
+            mv "$tmp/unpack" "$tmp/ready" || exit
+        else
+            mkdir -p "$tmp/ready/bin"
+            mv "$binary" "$tmp/ready/bin/$tool" || exit
+        fi
+    fi
+    if [ "$tool" = claude ]; then
+        mv "$tmp/ready/bin/claude" "$tmp/ready/bin/claude-native" || exit
+        # Keep this installation under update-tools instead of Claude's native
+        # self-updater replacing its managed launcher behind our back.
+        cat > "$tmp/ready/bin/claude" <<'CLAUDE_LAUNCHER'
+#!/bin/sh
+export DISABLE_AUTOUPDATER=1
+cli_dir=$(CDPATH='' cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)
+exec "$cli_dir/claude-native" "$@"
+CLAUDE_LAUNCHER
+        chmod u+x "$tmp/ready/bin/claude"
+        "$tmp/ready/bin/claude" --version >/dev/null 2>&1 || exit
     fi
     printf '%s\n%s\n' "$url" "$digest" > "$tmp/ready/.dotfiles-managed"
     # Download and validate everything before moving any existing launcher.
@@ -296,6 +348,15 @@ install_one() (
         ln -s "$dest/bin/$tool" "$active_path" || exit
     fi
     committed=true
+    if [ -f "$tmp/previous/.pixi-home" ]; then
+        previous_pixi_home=$(cat "$tmp/previous/.pixi-home")
+        case $previous_pixi_home in
+            "$store"/.tree-sitter.*)
+                if [ "$(dirname -- "$previous_pixi_home")" = "$store" ] && [ "$previous_pixi_home" != "$pixi_home" ]; then
+                    rm -rf "$previous_pixi_home"
+                fi ;;
+        esac
+    fi
     if [ "$action" = adopt ]; then printf 'backup: %s\n' "$tool_backup"; fi
     printf 'installed: %s\n' "$tool"
 )

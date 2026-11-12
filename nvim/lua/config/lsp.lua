@@ -15,18 +15,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 local servers = {
-	texlab = {
-		cmd = { "texlab" },
-		filetypes = { "tex", "plaintex", "bib" },
-		root_markers = { ".texlabroot", "texlabroot", ".latexmkrc", "latexmkrc", "Tectonic.toml", ".git" },
-		settings = {
-			texlab = {
-				build = { onSave = false, forwardSearchAfter = false },
-				chktex = { onOpenAndSave = vim.fn.executable("chktex") == 1, onEdit = false },
-				latexFormatter = vim.fn.executable("latexindent") == 1 and "latexindent" or "none",
-			},
-		},
-	},
 	tinymist = {
 		cmd = { "tinymist" },
 		filetypes = { "typst" },
@@ -51,3 +39,5 @@ for name, config in pairs(servers) do
 		vim.lsp.enable(name)
 	end
 end
+
+vim.diagnostic.config({ severity_sort = true, float = { border = "rounded", source = true } })

@@ -23,6 +23,11 @@ are stored under `$XDG_STATE_HOME/dotfiles/backups/`, default
 `~/.local/state/dotfiles/backups/`. Existing site shell settings should be reviewed
 and migrated rather than silently sourced from an old startup file.
 
+Git uses a real `$XDG_CONFIG_HOME/git/` directory with only `config` linked, so its
+relative include finds the installed private overrides even with an external
+checkout. If an older installation linked the entire `git/` directory, rerun
+`tools/install-dotfiles --backup` to preserve that link and migrate it.
+
 The installer does not install packages, initialize submodules, change the login
 shell, or modify the system profile. Run commands by their explicit paths: the
 repository's `tools` directory is intentionally not added to PATH.
@@ -115,18 +120,22 @@ run `DOTFILES_DOWNLOAD_DIR=/path/to/archives tools/install-tools`. The same pinn
 checksums and executable checks apply. Remove the supplied archives afterward;
 the installer does not maintain a download cache.
 
-No sudo, `jq`, Python environment, Conda environment, compiler, or additional
-package manager is needed for Linux installation. `curl`, `tar`, and a SHA-256
+No sudo, `jq`, Python environment, or compiler is needed for CLI core
+installation on Linux. `curl`, `tar`, and a SHA-256
 utility are needed for downloads. Linux x86_64 and aarch64 assets are listed;
 x86_64 is exercised on the available clusters.
-The optional editor profile also needs `unzip` for StyLua. Explicitly requested
-Typst releases need xz-capable `tar`. Raw executables, gzip/xz tarballs, and ZIP releases use the same
-checksum and executable checks.
+The optional editor profile also needs `unzip` for StyLua and xz-capable `tar`
+for Typst. Tree-sitter's generator uses a verified conda-forge package in a
+private Pixi home under the managed tool directory, with its own C runtime.
+Pixi is installed from CLI core if needed. This supports the clusters' older
+glibc without changing the user's Pixi globals or project environments.
+Other editor tools use standalone releases with checksum and executable checks.
 Neovim x86_64 is pinned to the
-older-glibc 0.12.5 build from `neovim/neovim-releases`, tested on marc3a's glibc
-2.28 with the full configuration, all 33 existing parsers, and terminal rendering.
-The standard upstream build previously failed on that cluster. The untested
-Linux aarch64 pin remains at 0.11.5. Existing usable versions need not match pins.
+older-glibc 0.12.5 build from `neovim/neovim-releases`. That binary was previously tested on
+marc3a's glibc 2.28, including parsers and terminal rendering.
+The standard upstream build previously failed on that cluster. Linux aarch64
+uses the standard 0.12.6 release; CI is configured to exercise it on a native ARM
+runner. Existing usable versions need not match these snapshots.
 Update pins/checksums deliberately rather than downloading a moving `latest` URL.
 
 Local tool directories are appended to the site's PATH rather than replacing
@@ -151,8 +160,9 @@ Explicit updates are scoped to this tool set:
 
 On Linux, updates replace only installations managed by this installer. Existing
 system tools and other local installations are reused. On macOS, updates apply
-only the CLI Brewfile or the explicitly selected formulae. Pixi global/project
-environments and unrelated Homebrew packages are not upgraded.
+only the selected Brewfile profile or explicitly selected packages. The private
+Tree-sitter environment is replaced together with its managed generator;
+user Pixi environments and unrelated Homebrew packages are not upgraded.
 
 `--adopt-all` covers only the ten CLI tools listed in the Linux manifest; it
 is not a scan of everything installed in your account. `--adopt TOOL ...` selects
@@ -162,7 +172,8 @@ symlinks to them are protected. Newer-than-pinned versions are retained rather
 than downgraded. `--check` reports installed/pinned versions, ownership, and the
 planned action without installing tools. On macOS it uses `brew outdated` and
 preserves Homebrew's exit status (which may be nonzero when updates exist).
-With `--editor --adopt-all`, the selected set is the three Linux editor tools instead.
+With `--editor --adopt-all`, the selected set is the seven Linux editor tools;
+`--agents --adopt-all` selects the two coding agents.
 
 Adoption first downloads, verifies, and runs the replacement, then backs up the
 original launcher entries under
@@ -211,84 +222,141 @@ downloads and removes them afterward.
 
 ## Editors and shell integrations
 
-Use `v` or `$EDITOR` for Neovim → Vim → vi selection. `vim` and `vi` remain usable
-as explicit fallback commands. The Vim configuration needs no plugins/submodules.
-Missing eza leaves ordinary ls aliases; missing Atuin leaves Bash history;
-missing Starship leaves the shell prompt. Git, grep, and find remain available
-when their optional interfaces/replacements are absent; incompatible command
-arguments are not translated through aliases.
+Use `v` or `$EDITOR` for Neovim → Vim → vi selection. The full shared setup
+requires Neovim 0.12+. Older versions and `DOTFILES_NVIM_MODE=basic` use the
+standalone Vim configuration. Missing plugins leave a native editing setup;
+opening the editor never downloads plugins, tools, parsers, or dictionaries.
 
-Neovim starts with a built-in configuration when its plugins have not been
-provisioned. Neovim older than 0.11 uses the standalone Vim configuration.
-Install the pinned full setup explicitly, after configuration installation:
+The Vim fallback uses only the runtime shipped with Vim: syntax, filetype
+indentation, netrw for directories, path completion, buffers, splits, and
+quickfix. No plugin manager or extra Vim plugins are installed. `:FallbackHelp`
+or `<Space>hk` shows its key reference. `/` and `n`/`N` search within a file;
+`:vimgrep /pattern/j FILES` and `:copen` provide explicit multi-file search.
+Insert-mode Ctrl+n/p completes words and Ctrl+x Ctrl+f completes filenames.
+There are no project-wide scans, builds, formatters, or language servers in
+the fallback. The local Ayu theme is optional, and persistent undo is enabled
+when its state directory has been provisioned by `tools/install-dotfiles`.
+
+Shared mnemonic keys use **subject + action** after Space:
+
+| Key | Meaning | Vim fallback | Full Neovim |
+| --- | --- | --- | --- |
+| `ff` / `fo` | File find / open | `:find` / `:edit`, with Tab completion | Project file picker / `:edit` |
+| `fe` / `fs` / `fn` | File explorer / save / new | netrw / write / new buffer | Explorer / write / new buffer |
+| `bl` / `bb` | Buffer list / back | List and select / alternate buffer | Buffer picker / alternate buffer |
+| `bn` / `bp` / `bd` | Buffer next / previous / delete | Native buffer commands | Native navigation / close buffer |
+| `wh` / `wv` / `wc` | Window horizontal split / vertical split / close | Native window commands | Same |
+| `hs` / `hk` | Help search / keys | Help-tag completion / key reference | Help picker / keybinding picker |
+| `uw` / `us` | UI wrapping / spelling | Toggle for current window | Same |
+| `qa` | Quit all | Quit all, confirming unsaved edits | Same |
+
+The focused plugin set is Ayu, Snacks (files/search/explorer/terminals),
+Which-key, Gitsigns, Conform, modern Tree-sitter, and Typst Preview, managed by
+Lazy. Native Neovim supplies LSP, completion, snippets, commenting, diagnostics,
+and buffer navigation. There is no second completion framework, editor package
+manager, LaTeX integration, dashboard, or animation layer.
+
+Provision tools, plugins, and parsers explicitly:
 
 ```sh
-~/.config/tools/setup-editor
-# Optionally compile a small set of Tree-sitter parsers (requires a compiler):
+~/.config/tools/install-tools
+~/.config/tools/install-tools --editor
+~/.config/tools/install-tools --agents
 ~/.config/tools/setup-editor --parsers --spell
 ```
 
-Already provisioned plugins at their pinned commits are reused without a fetch.
-The optional parser set is Bash, Fish, Lua, Python, Markdown, TOML, and YAML.
-On macOS it also includes BibTeX and Typst. LaTeX's parser is added on macOS only
-when an existing `tree-sitter` generator is available; built-in LaTeX syntax
-remains the fallback. More
-parsers can be installed explicitly with `:TSInstall`. No parsers are installed
-on file open, and plugin update checks are disabled. Use
-`DOTFILES_NVIM_MODE=basic nvim` to force the basic configuration.
-Global executables supply formatting; inspect them with `:ConformInfo`.
+`--editor` installs shfmt, ShellCheck, StyLua, Tree-sitter CLI, Tinymist, Typst,
+and websocat on Linux. macOS also installs the Bash and Fish language servers.
+Python's Pixi/Ruff/ty stack belongs to CLI core. Node and Fish language servers
+on Linux are optional existing site tools. No TeX distribution or PDF viewer
+is installed. Both platforms use the same parsers and keybindings.
 
-Provision editor tools separately from cluster shell tools:
+`--agents` installs Codex CLI and Claude Code: native Homebrew casks on macOS,
+and verified release packages on Linux. Codex's helper executables and sandbox
+resources are retained. The managed Linux Claude launcher disables its native
+self-updater so `update-tools --agents` owns updates. Existing working agent
+installations are reused; Linux adoption remains explicit with `--adopt` or
+`--adopt-all`. Agent logins, credentials, settings, and approval controls remain
+in the agents' native configuration locations.
+
+Updates use the same profiles:
 
 ```sh
-~/.config/tools/install-tools --editor
 ~/.config/tools/update-tools --editor --check
 ~/.config/tools/update-tools --editor
+~/.config/tools/update-tools --agents --check
+~/.config/tools/update-tools --agents
+# After pulling a changed plugin lockfile:
+~/.config/tools/setup-editor --parsers
 ```
 
-On macOS this applies `brew/editor.Brewfile`: Texlab, Tinymist, Typst, ShellCheck,
-shfmt, StyLua, and the Bash/Fish language servers. Linux installs only shfmt,
-ShellCheck, and StyLua; it does not add Node, a Python environment, Fish, or
-LaTeX/Typst tooling. Writing is a workstation workflow. Existing Bash/Fish
-language servers are used when available. A binary
-that cannot run against the site's glibc is skipped with a nonzero installer
-status; other selected tools are still attempted. For a Linux workstation,
-`install-tools texlab tinymist typst` explicitly requests writing tools. Texlab
-5.26.0 needs a newer glibc than marc3a's 2.28; no compatibility libraries are installed.
+Tree-sitter uses its current `main` API with a global generator (0.26.1+) and a C
+compiler. Linux provisions the generator through an isolated Pixi environment;
+macOS uses Homebrew's `tree-sitter-cli`. The shared parser set covers Bash, Fish, Lua, Python, JSON, Markdown,
+regular expressions, TOML, YAML, and Typst. Setup preserves legacy parser directories in
+`$XDG_STATE_HOME/dotfiles/backups/parsers-*` before compiling the shared set.
+Additional grammars can be installed explicitly with `:TSInstall LANGUAGE`.
+Missing grammars retain built-in syntax and indent folds.
 
-Neovim uses native completion and one server per language: ty, Texlab, Tinymist,
-and optionally bash-language-server/fish-lsp. LaTeX builds and PDF previews stay
-external. Tinymist exports no PDFs; its integrated formatter needs no separate
-Typst formatter. Texlab can reuse existing ChkTeX/latexindent without installing
-them or a second TeX toolchain.
+`K`, `grn`, `grr`, `gra`, `gri`, `grt`, and `gO` use Neovim's native language
+features; `gd` goes to a definition. Completion triggers automatically on server
+trigger characters or manually with `<C-x><C-o>`. `<C-y>` accepts a candidate;
+Tab/Shift-Tab move through an active native snippet. `[b` and `]b` switch buffers;
+`gc` comments text. Ctrl+h/j/k/l moves between splits on all platforms.
 
-`<leader>cf` formats the buffer/selection. Python, Bash, Fish, Lua, and Typst
-format on save when a formatter is available. LaTeX/BibTeX and prose format only
-on demand, preserving authored line breaks on save. Missing formatters leave
-editing/saving usable. Shell scripts use shfmt instead of Beautysh.
+Press Space and pause to discover grouped commands. Neovim adds these mnemonic
+bindings to the common fallback keys above:
 
-`:Lint` or `<leader>cl` checks unsaved Python, Bash/sh, or Fish buffer contents
-using Ruff, ShellCheck, or Fish's native syntax checker. Findings open quickfix;
-there is no second Python LSP or lint plugin. Native LSP keys include `K`
-(hover), `grn` (rename), `grr` (references), `gra` (code action), and `<C-x><C-o>`
-(completion); `<C-y>` accepts completion.
+| Key | Action |
+| --- | --- |
+| `<Space>st` | Search text in the project |
+| `<Space>tt` | Terminal toggle in the project |
+| `<Space>gs` / `<Space>gd` | Git status / diff |
+| `<Space>cf` / `<Space>cl` | Format / lint current unsaved contents |
+| `<Space>cd` / `<Space>cs` | Diagnostic details / document symbols |
+| `<Space>db` | Build the current Typst file to PDF |
+| `<Space>dv` / `<Space>df` / `<Space>ds` | Toggle preview / sync source to preview / stop preview |
+| `<Space>du` | Show the running preview URL |
+| `<Space>ap` | Agent picker: Codex or Claude |
+| `<Space>hn` | History of notifications |
 
-Text, Markdown, LaTeX, and Typst enable soft wrapping and spelling. English is
-bundled with Neovim. `setup-editor --spell` explicitly downloads Vim's official
-German dictionary with a pinned SHA-256; existing dictionaries are reused.
-Without a German dictionary, English remains active until setup is run. No
-dictionaries are downloaded while opening a document. Parserless buffers retain
-indent folds rather than receiving an unusable Tree-sitter fold expression.
+`:Agent [codex|claude]` opens a persistent terminal for that agent and project;
+repeating it toggles the terminal. Agents start in the same project root used
+by file search and the regular terminal. Codex and Claude use their existing
+login and settings. Agent conversations are started by the user, not on editor
+startup. Double Escape returns from a Snacks terminal to Normal mode.
 
-Pixi completion generation is also explicit:
+The plugin set uses Lua/Vimscript, so Neovim's optional Node, Perl, Python, and
+Ruby remote-plugin hosts are disabled. Python editing still uses native LSP
+with ty and the project's interpreter; it needs no `pynvim` package. The complete
+`:checkhealth` command also probes disabled Snacks features such as image/math
+rendering; their optional dependencies are outside this setup.
 
-```sh
-~/.config/tools/setup-shell
-```
+Python uses ty for language features and Ruff for formatting/linting. Shells use
+shfmt/ShellCheck or Fish's native tools. Typst uses Tinymist for language features
+and formatting, Typst for explicit PDF builds, and Typst Preview with global
+Tinymist/websocat for browser previews with source/preview cross-navigation.
+Set `TYPST_MAIN` for a multi-file document's main file (absolute, or relative to
+`TYPST_ROOT` when set, otherwise the detected project root). Set `TYPST_ROOT`
+when imports need an explicit project root. Preview binaries are never downloaded by the plugin.
+Local previews open in the default browser. Over SSH, start the preview and use
+`<Space>du` or `:DocumentUrl` to see its URL. From a local terminal, forward that
+port with `ssh -N -L PORT:127.0.0.1:PORT HOST`, then open the displayed URL in
+your local browser. HTTP and WebSocket share that port. Keep the tunnel open
+while previewing. The plugin uses an automatic port because its fixed-port
+option is incompatible with current Tinymist. Remote sessions suppress browser
+launches; `DOTFILES_PREVIEW_COMMAND` can override the browser command on either
+platform. The editor and agents run on the remote machine.
 
-This refreshes cached Bash/Fish completions, preserving each previous file if
-generation fails. The shells only read those caches. Atuin's existing sync
-configuration is retained; credentials/history live outside this repository.
+Code and Typst format on save when a formatter is available; text and Markdown
+preserve authored line breaks. Text, Markdown, Typst, and Git commits enable soft
+wrapping and spelling. English is bundled; `setup-editor --spell` downloads a
+checksum-verified German dictionary explicitly. `:checkhealth dotfiles` reports
+which shared tools are available and which installer profile supplies them.
+
+Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
+missing Starship leaves the shell prompt. Pixi completions are generated only
+by `tools/setup-shell`, never by shell startup.
 
 ## Colors
 
@@ -307,8 +375,7 @@ the terminal palette comes from the workstation's terminal emulator over SSH.
 Reload Kitty with Ctrl+Shift+F5 and open a new shell to pick up all colors.
 Restart TUIs/editors after updating their configuration.
 
-Codex CLI and Claude Code are optional workstation casks in
-`brew/workstation.Brewfile`; cluster provisioning does not install them. After
+Codex CLI and Claude Code are optional native tools in the `--agents` profile; the CLI core profile does not install them. After
 installing them, apply the tracked agent themes explicitly:
 
 ```sh
@@ -328,14 +395,88 @@ and [Claude Code theme documentation](https://code.claude.com/docs/en/terminal-c
 
 ## Maintenance and verification
 
+After these changes have been committed and pushed, machines running the
+starting revision (`b4dcc97`) can migrate in place. Close editor sessions first
+so an old process does not load a mixture of plugin versions during the update.
+Use the actual checkout path if it lives outside `~/.config`:
+
 ```sh
-git -C ~/.config pull --rebase
+cd ~/.config
+git status --short
+# Resolve tracked/untracked changes before pulling; keep private overrides in dotfiles/local/.
+git -c submodule.recurse=false pull --ff-only
+./tools/update-dotfiles --no-pull --backup --all
+```
+
+The first pull bootstraps the updater, which was absent from the starting
+revision. `--no-pull` applies that checkout immediately. `--backup` migrates an
+old symlinked XDG `git/` directory into a real directory with a linked config;
+it also preserves any other conflicting files before replacing them. Review
+installer `skip:` messages when omitting `--backup`. Existing host selection
+and `dotfiles/local/` files are retained; there is no need to repeat `--host`.
+
+`--tools` updates CLI core and regenerates cached completions. `--editor` updates
+Neovim and editor dependencies, restores the exact plugin commits, and compiles
+the shared parsers. Old parser directories are preserved in state backups.
+`--agents` updates the two optional coding CLIs; native login/configuration and
+the separately applied agent themes remain as described above. Omit
+`--editor`/`--agents` on machines where those features are not wanted. The removed
+Vim submodule is no longer used or fetched; leftover submodule directories and
+Git metadata can be reviewed and removed separately.
+
+Linux tool ownership rules still apply. An older working Neovim supplied by
+the site or installed outside this tool manager is preserved. Full editor
+provisioning requires 0.12+; use a supported site module, or explicitly preview
+and adopt an eligible user installation:
+
+```sh
+./tools/update-tools --check --adopt nvim
+./tools/update-tools --adopt nvim
+./tools/update-dotfiles --no-pull --editor
+```
+
+Site/system binaries are protected even with `--adopt`. Vim and older Neovim
+remain usable as the basic fallback. `DOTFILES_NVIM_MODE=basic nvim` also opens
+the fallback while repairing an incomplete full-editor update.
+
+For subsequent updates, use an explicit command with the profiles wanted on
+that machine:
+
+```sh
+~/.config/tools/update-dotfiles --check --all
+~/.config/tools/update-dotfiles --all
+# Configuration links only:
+~/.config/tools/update-dotfiles
+```
+
+`--all` selects CLI core, editor, and agents together; `--backup` remains a
+separate choice for replacing conflicting configuration entries with backups.
+The default updates Git and reapplies configuration links. Profiles are explicit
+on each invocation; include `--editor` whenever refreshing a provisioned full
+Neovim setup. Git uses the current branch's configured upstream and requires a
+clean checkout with no local-only commits. Updates fast-forward without merging
+or rebasing local work. Submodules are left alone. `--check` fetches refs and
+lists incoming commits and planned steps; it leaves HEAD, configuration,
+packages, and plugins unchanged. It is a workflow preview; use
+`tools/update-tools --check` for individual tool versions.
+
+After a successful pull the updater executes the newly checked-out script.
+Failures stop subsequent steps and leave completed steps in place. Fix the
+reported issue and rerun with `--no-pull` and the same profile flags. Private
+configuration and per-tool backup policies remain in the underlying installers.
+The updater runs only when invoked; shell and editor startup stay offline.
+
+Verify changes locally with:
+
+```sh
 python3 ~/.config/tests/check_dotfiles.py
 ```
 
 The tests use disposable home directories and offline fixtures to check
 installation/backups, configuration precedence, quiet noninteractive startup,
 PATH handling, tool reuse, checksum failure recovery, and editor fallbacks.
+They also exercise local Git remotes, self-update previews, migration from the
+original installer, profile selection, and refusal to overwrite local work.
 Python is needed only for tests, not shell startup or package installation.
 After provisioning the full editor, test a Neovim upgrade against its plugins,
 installed parser binaries, filetypes, formatting, and file saving with:
@@ -345,13 +486,45 @@ cd ~/.config
 nvim --headless -i NONE -c "lua dofile('tests/check_nvim.lua')"
 # With editor tools and spelling provisioned:
 nvim --headless -i NONE -c "lua dofile('tests/check_languages.lua')"
+# Real Typst build/preview; agent launches are mocked:
+nvim --headless -i NONE -c "lua dofile('tests/check_workflows.lua')"
 ```
 
 The editor check uses and removes its own temporary files.
 
+GitHub Actions runs the offline suite and explicitly provisions the full editor
+with parsers and Typst build/preview tools on macOS, Linux x86_64, and Linux aarch64. The Linux jobs download
+the manifest's exact Neovim archives and verify their checksums before executing
+them. The workflow uses a disposable home and fails if provisioning changes the
+plugin lockfile. Its first hosted run occurs after the workflow is pushed.
+
+### Version pins
+
+Pins are snapshots for reproducible setup, not a requirement to downgrade every
+machine to the same version. Linux reuses working site/system tools; Homebrew
+formulae are unpinned. Keep immutable release URLs and SHA-256 checksums together
+so offline archives can be verified without trusting a moving `latest` download.
+
+| Pin | Purpose and update policy |
+| --- | --- |
+| `tools/linux-releases.txt` | Verified fallback downloads. Update ordinary tools to reviewed stable releases; test the executable and shell/editor integration. |
+| Linux x86_64 Neovim 0.12.5 | Compatibility hold: the latest [older-glibc build](https://github.com/neovim/neovim-releases) was tested on marc3a's glibc 2.28. Lift this hold only after testing a replacement on the cluster. |
+| `nvim/lazy-lock.json` | Keep exact plugin commits so all machines restore the same setup. Refresh deliberately with `:Lazy update`, then run the editor/language checks before sharing the new lockfile. |
+| Tree-sitter `main` commit | Uses the supported Neovim 0.12 API. Update the pinned plugin and parser binaries together through explicit provisioning. |
+| Linux Tree-sitter CLI package | Pins a conda-forge build compatible with glibc 2.17+. Pixi resolves its C runtime in a private environment; the upstream Linux binaries currently require glibc 2.39. |
+| Vendored `bash-preexec` 0.7.0 | Keeps history hooks offline and supports Bash 3.2 through 5.3. Review the diff against the [exact upstream revision](https://github.com/rcaloras/bash-preexec/blob/d866eeefdb8dfce075cbd4e37dc73c4deb4b0bd2/bash-preexec.sh) when updating. |
+| German spelling checksum | Validates the downloaded dictionary. Its upstream URL is mutable, so an upstream change must fail verification until the new contents/checksum are reviewed. |
+| JetBrains submodule commit | `lazy-idea` supplies the optional JetBrains mappings. Keep its revision fixed for reproducible setup; initialize or update it only when using that integration. |
+| CI action commits | Keep full commit SHAs for the action code executed by CI; the release comments identify which upstream tags to review for updates. |
+
+The plugin lockfile is sufficient to choose versions; there is no additional
+global stable-tag filter. This avoids trapping plugins on old release tags when
+their maintained code lives on a branch. The supported full configuration uses
+Neovim 0.12+; older editor versions use the basic fallback.
+
 The root `.gitignore` is an allowlist because this checkout can also be the live
 XDG directory. Unmanaged application data, private overrides, and generated
 completions stay out of Git. `nvim/lazy-lock.json` pins the plugin setup.
-The historical `vim` and `lazy-idea` submodules are optional and are never cloned
-by the installer. JetBrains integration requires explicitly initializing
-`lazy-idea`; it is unnecessary on clusters.
+The `lazy-idea` submodule is optional and is never cloned by the installer.
+JetBrains integration requires explicitly initializing it; it is unnecessary
+on clusters.

@@ -12,8 +12,8 @@ return {
 		},
 		default_format_opts = { lsp_format = "fallback" },
 		format_on_save = function(buffer)
-			-- Preserve prose/TeX line breaks; format these explicitly when wanted.
-			if vim.tbl_contains({ "tex", "plaintex", "bib", "text", "markdown" }, vim.bo[buffer].filetype) then
+			-- Preserve authored prose line breaks; format explicitly when wanted.
+			if vim.tbl_contains({ "text", "markdown" }, vim.bo[buffer].filetype) then
 				return
 			end
 			local formatters, lsp = require("conform").list_formatters_to_run(buffer)

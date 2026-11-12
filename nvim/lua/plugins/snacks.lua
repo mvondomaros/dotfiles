@@ -1,321 +1,137 @@
 return {
 	"folke/snacks.nvim",
-	priority = 1000,
 	lazy = false,
-
+	priority = 1000,
 	opts = {
-		animate = { enabled = true },
 		bigfile = { enabled = true },
 		bufdelete = { enabled = true },
-		dashboard = { enabled = true },
-		explorer = { enabled = true, replace_netrw = true, trash = true },
-		dim = { enabled = true },
-		git = { enabled = true },
-		indent = { enabled = true },
+		explorer = { enabled = true, replace_netrw = true },
 		input = { enabled = true },
-		lazygit = { enabled = true },
+		picker = { enabled = true },
 		notifier = { enabled = true },
 		terminal = { enabled = true },
-		picker = { enabled = true },
-		scope = { enabled = true },
-		scroll = { enabled = true },
-		statuscolumn = { enabled = true },
-		toggle = { map = vim.keymap.set },
-		util = { enabled = true },
 	},
-
-	-- all Snacks-related keymaps
 	keys = function()
-		local Snacks = require("snacks")
+		local root = require("config.project").root
 		local picker = require("snacks.picker")
-
-		local function project_root()
-			return vim.fs.root(0, ".git") or vim.fs.root(vim.fn.getcwd(), ".git") or vim.fn.getcwd()
-		end
-
 		return {
-			-- Notifications ---------------------------------------------------------
 			{
-				"<leader>n",
+				"<leader>st",
 				function()
-					if Snacks.config.picker and Snacks.config.picker.enabled then
-						picker.notifications()
-					else
-						Snacks.notifier.show_history()
-					end
+					picker.grep({ cwd = root() })
 				end,
-				desc = "Show notifications",
+				desc = "Search project text",
 			},
-
-			-- Buffers & bufdelete ---------------------------------------------------
 			{
-				"<leader>,",
+				"<leader>bl",
 				function()
 					picker.buffers()
 				end,
-				desc = "Find buffers",
+				desc = "Buffer: list",
 			},
+			{
+				"<leader>fe",
+				function()
+					Snacks.explorer.open({ cwd = root() })
+				end,
+				desc = "File: explorer",
+			},
+			{
+				"<leader>ff",
+				function()
+					picker.files({ cwd = root() })
+				end,
+				desc = "Find project files",
+			},
+			{
+				"<leader>fr",
+				function()
+					picker.recent({ filter = { cwd = root() } })
+				end,
+				desc = "Recent project files",
+			},
+			{ "<leader>bb", "<cmd>buffer #<CR>", desc = "Buffer: back" },
 			{
 				"<leader>bd",
 				function()
 					Snacks.bufdelete()
 				end,
-				desc = "Delete buffer",
-			},
-			{
-				"<leader>bo",
-				function()
-					Snacks.bufdelete.other()
-				end,
-				desc = "Delete other buffers",
-			},
-
-			-- Files / find ----------------------------------------------------------
-			{
-				"<leader><space>",
-				function()
-					picker.files({ cwd = project_root() })
-				end,
-				desc = "Find files (root)",
-			},
-			{
-				"<leader>fe",
-				function()
-					Snacks.explorer.open()
-				end,
-				desc = "Explorer",
-			},
-			{
-				"<leader>ff",
-				function()
-					picker.files({ cwd = project_root() })
-				end,
-				desc = "Find files (root)",
-			},
-			{
-				"<leader>fF",
-				function()
-					picker.files({ cwd = vim.fn.getcwd() })
-				end,
-				desc = "Find files (cwd)",
-			},
-			{
-				"<leader>fg",
-				function()
-					picker.git_files()
-				end,
-				desc = "Find git files",
-			},
-			{
-				"<leader>fr",
-				function()
-					picker.oldfiles({ cwd = project_root() })
-				end,
-				desc = "Find recent files (root)",
-			},
-			{
-				"<leader>fR",
-				function()
-					picker.recent({ filter = { cwd = true } })
-				end,
-				desc = "Find recent files (cwd)",
-			},
-			{
-				"<leader>fp",
-				function()
-					picker.projects()
-				end,
-				desc = "Find projects",
-			},
-
-			-- Grep ------------------------------------------------------------------
-			{
-				"<leader>sf",
-				function()
-					picker.grep({ cwd = project_root() })
-				end,
-				desc = "Grep in files (root)",
-			},
-			{
-				"<leader>sF",
-				function()
-					picker.grep({ cwd = vim.fn.getcwd() })
-				end,
-				desc = "Grep in files (cwd)",
-			},
-			{
-				"<leader>sb",
-				function()
-					picker.grep_buffers()
-				end,
-				desc = "Grep in open buffers",
-			},
-
-			-- Search / misc pickers -------------------------------------------------
-			{
-				'<leader>s"',
-				function()
-					picker.registers()
-				end,
-				desc = "Search registers",
-			},
-			{
-				"<leader>s/",
-				function()
-					picker.search_history()
-				end,
-				desc = "Search search history",
-			},
-			{
-				"<leader>sC",
-				function()
-					picker.command_history()
-				end,
-				desc = "Search command history",
-			},
-			{
-				"<leader>sc",
-				function()
-					picker.commands()
-				end,
-				desc = "Search commands",
-			},
-			{
-				"<leader>sh",
-				function()
-					picker.help()
-				end,
-				desc = "Search help pages",
-			},
-			{
-				"<leader>sk",
-				function()
-					picker.keymaps()
-				end,
-				desc = "Search keymaps",
-			},
-
-			-- Git pickers -----------------------------------------------------------
-			{
-				"<leader>gd",
-				function()
-					picker.git_diff()
-				end,
-				desc = "Git diff (local)",
-			},
-			{
-				"<leader>gD",
-				function()
-					picker.git_diff({
-						base = vim.fn.systemlist("git rev-parse --abbrev-ref --symbolic-full-name @{u}")[1],
-						group = true,
-					})
-				end,
-				desc = "Git diff (upstream)",
+				desc = "Close buffer",
 			},
 			{
 				"<leader>gs",
 				function()
-					picker.git_status()
+					if vim.fn.executable("lazygit") == 1 then
+						Snacks.lazygit({ cwd = root() })
+					else
+						picker.git_status({ cwd = root() })
+					end
 				end,
-				desc = "Git status",
+				desc = "Git: status",
 			},
 			{
-				"<leader>gS",
+				"<leader>gd",
 				function()
-					picker.git_stash()
+					picker.git_diff({ cwd = root() })
 				end,
-				desc = "Git stash",
-			},
-
-			-- Extra git pickers -----------------------------------------------------
-			{
-				"<leader>gL",
-				function()
-					picker.git_log()
-				end,
-				desc = "Git log (cwd)",
-			},
-			{
-				"<leader>gf",
-				function()
-					picker.git_log_file()
-				end,
-				desc = "Git log (file)",
+				desc = "Git diff",
 			},
 			{
 				"<leader>gl",
 				function()
-					picker.git_log({ cwd = project_root() })
+					picker.git_log({ cwd = root() })
 				end,
-				desc = "Git log (root)",
-			},
-
-			-- Lazygit ---------------------------------------------------------------
-			{
-				"<leader>gg",
-				function()
-					if vim.fn.executable("lazygit") == 1 then
-						Snacks.lazygit({ cwd = project_root() })
-					else
-						vim.notify("lazygit not found in PATH", vim.log.levels.WARN)
-					end
-				end,
-				desc = "Open Lazygit (root)",
+				desc = "Git history",
 			},
 			{
-				"<leader>gG",
+				"<leader>sd",
 				function()
-					if vim.fn.executable("lazygit") == 1 then
-						Snacks.lazygit()
-					else
-						vim.notify("lazygit not found in PATH", vim.log.levels.WARN)
-					end
+					picker.diagnostics()
 				end,
-				desc = "Open Lazygit (cwd)",
-			},
-
-			-- Terminals -------------------------------------------------------------
-			{
-				"<leader>fT",
-				function()
-					Snacks.terminal()
-				end,
-				desc = "Open terminal (cwd)",
+				desc = "Find diagnostics",
 			},
 			{
-				"<leader>ft",
+				"<leader>hs",
 				function()
-					Snacks.terminal(nil, { cwd = project_root() })
+					picker.help()
 				end,
-				desc = "Open terminal (root)",
+				desc = "Search help",
 			},
 			{
-				"<c-/>",
+				"<leader>hk",
 				function()
-					Snacks.terminal(nil, { cwd = project_root() })
+					picker.keymaps()
 				end,
-				mode = { "n", "t" },
-				desc = "Toggle terminal (root)",
+				desc = "Search keybindings",
 			},
 			{
-				"<c-_>",
+				"<leader>tt",
 				function()
-					Snacks.terminal(nil, { cwd = project_root() })
+					Snacks.terminal.toggle(nil, { cwd = root() })
 				end,
-				mode = { "n", "t" },
-				desc = "which_key_ignore",
+				desc = "Terminal: toggle for project",
+			},
+			{
+				"<leader>hn",
+				function()
+					picker.notifications()
+				end,
+				desc = "History: notifications",
+			},
+			{
+				"<leader>uw",
+				function()
+					vim.wo.wrap = not vim.wo.wrap
+				end,
+				desc = "Toggle wrapping",
+			},
+			{
+				"<leader>us",
+				function()
+					vim.wo.spell = not vim.wo.spell
+				end,
+				desc = "Toggle spelling",
 			},
 		}
-	end,
-
-	config = function(_, opts)
-		local Snacks = require("snacks")
-		Snacks.setup(opts)
-
-		-- Simple toggles (you can prune these)
-		Snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>us")
-		Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
-		Snacks.toggle.line_number():map("<leader>ul")
 	end,
 }

@@ -1,4 +1,5 @@
 # Optional full workstation installation. CLI provisioning uses cli.Brewfile.
 eval File.read(File.join(__dir__, "cli.Brewfile"))
 eval File.read(File.join(__dir__, "editor.Brewfile"))
+eval File.read(File.join(__dir__, "agents.Brewfile"))
 eval File.read(File.join(__dir__, "workstation.Brewfile"))

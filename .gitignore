@@ -3,6 +3,7 @@
 /*
 !/.gitignore
 !/.gitmodules
+!/.github/
 !/LICENSE
 !/README.md
 !/atuin/
@@ -22,7 +23,6 @@
 !/pixi/
 !/starship.toml
 !/tools/
-!/vim/
 !/vim-colors/
 !/vimrc
 !/vmdrc
@@ -47,6 +47,7 @@
 *.swp
 __pycache__/
 *.pyc
+.netrwhist
 
 # Private host selection, environment, and application overrides.
 /dotfiles/local/

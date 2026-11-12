@@ -1,35 +1,29 @@
 return {
 	"nvim-treesitter/nvim-treesitter",
-	build = ":TSUpdate",
-	event = { "BufReadPost", "BufNewFile" },
-
-	opts = {
-		install = { use_ts_cli = false },
-		ensure_installed = {},
-
-		sync_install = false,
-		auto_install = false,
-		highlight = { enable = true },
-		indent = { enable = true },
-	},
-
-	config = function(_, opts)
-		require("nvim-treesitter.configs").setup(opts)
-
-		local function folds()
-			local language = vim.treesitter.language.get_lang(vim.bo.filetype)
+	branch = "main",
+	lazy = false,
+	-- Parser compilation belongs to the explicit setup-editor --parsers step.
+	config = function()
+		require("nvim-treesitter").setup({ install_dir = vim.fn.stdpath("data") .. "/site" })
+		local function enable(event)
+			local buffer = event and event.buf or vim.api.nvim_get_current_buf()
+			local ft = vim.bo[buffer].filetype
+			if vim.bo[buffer].buftype ~= "" then
+				return
+			end
+			local language = vim.treesitter.language.get_lang(ft)
 			local ok, loaded = pcall(vim.treesitter.language.add, language or "")
 			if ok and loaded then
-				vim.opt_local.foldmethod = "expr"
-				vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
+				pcall(vim.treesitter.start, buffer, language)
+				vim.wo.foldmethod = "expr"
+				vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 			else
-				vim.opt_local.foldmethod = "indent"
+				vim.wo.foldmethod = "indent"
 			end
 		end
 		vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
-			group = vim.api.nvim_create_augroup("dotfiles_folds", { clear = true }),
-			callback = folds,
+			group = vim.api.nvim_create_augroup("dotfiles_treesitter", { clear = true }),
+			callback = enable,
 		})
-		folds()
 	end,
 }

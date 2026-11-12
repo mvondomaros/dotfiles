@@ -1,7 +1,7 @@
 #!/bin/sh
 # Explicitly download pinned plugins. Parser installation is optional.
 set -eu
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 parsers=false
 spell=false
 for option in "$@"; do
@@ -12,7 +12,11 @@ for option in "$@"; do
     esac
 done
 command -v nvim >/dev/null 2>&1 || { printf 'Neovim is unavailable; use Vim.\n' >&2; exit 1; }
-nvim --headless -u NONE -i NONE '+lua if vim.fn.has("nvim-0.11") == 0 then vim.cmd("cquit 1") end' +qa
+if ! nvim --headless -u NONE -i NONE '+lua if vim.fn.has("nvim-0.12") == 0 then vim.cmd("cquit 1") end' +qa; then
+    printf 'Full editor setup requires Neovim 0.12+. The basic Vim-style fallback remains available.\n' >&2
+    printf 'Upgrade Neovim through its package manager/site modules, or explicitly adopt an eligible local installation with tools/update-tools --adopt nvim.\n' >&2
+    exit 1
+fi
 if nvim --headless -u NONE -i NONE -l "$repo_dir/tools/check-editor.lua" "$repo_dir/nvim/lazy-lock.json" >/dev/null 2>&1; then
     printf 'reuse: pinned Neovim plugins\n'
 else
@@ -22,12 +26,15 @@ else
         git clone --filter=blob:none https://github.com/folke/lazy.nvim.git "$lazy_dir"
     fi
     commit=$(nvim --headless -u NONE -i NONE -l "$repo_dir/tools/lazy-commit.lua" "$repo_dir/nvim/lazy-lock.json")
+    if ! git -C "$lazy_dir" cat-file -e "$commit^{commit}" 2>/dev/null; then
+        git -C "$lazy_dir" fetch --filter=blob:none --depth=1 origin "$commit"
+    fi
     git -C "$lazy_dir" checkout "$commit"
-    DOTFILES_NVIM_SETUP=1 nvim --headless -i NONE '+Lazy! restore' +qa
+    nvim --headless -u NONE -i NONE -l "$repo_dir/tools/restore-editor.lua" "$repo_dir"
     nvim --headless -u NONE -i NONE -l "$repo_dir/tools/check-editor.lua" "$repo_dir/nvim/lazy-lock.json"
 fi
 if [ "$parsers" = true ]; then
-    DOTFILES_PARSER_SETUP="$repo_dir/tools/setup-parsers.lua" nvim --headless -i NONE '+lua dofile(vim.env.DOTFILES_PARSER_SETUP)' +qa
+    DOTFILES_NVIM_MODE=auto DOTFILES_PARSER_SETUP="$repo_dir/tools/setup-parsers.lua" nvim --headless -i NONE '+lua dofile(vim.env.DOTFILES_PARSER_SETUP)' +qa
 fi
 if [ "$spell" = true ]; then
     spell_dir=${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/spell

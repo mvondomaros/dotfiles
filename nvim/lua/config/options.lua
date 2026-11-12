@@ -1,6 +1,6 @@
 local opt = vim.opt
 
-opt.autowrite = true
+opt.autowrite = false
 opt.clipboard = "unnamedplus"
 opt.completeopt = { "menuone", "noselect" }
 opt.conceallevel = 2

@@ -95,31 +95,9 @@ local ok, err = xpcall(function()
 		print("SKIP: workstation Typst tooling unavailable")
 	end
 
-	local tex = "\\documentclass{article}\n\\begin{document}\n\\section{Introduction}\nText.\n\\end{document}"
-	edit("sample.tex", tex)
-	local texlab
-	if vim.fn.executable("texlab") == 1 then
-		texlab = attached("texlab")
-		local symbols = texlab:request_sync(
-			"textDocument/documentSymbol",
-			{ textDocument = { uri = vim.uri_from_bufnr(0) } },
-			5000,
-			0
-		)
-		assert(symbols and symbols.result and #symbols.result > 0, "LaTeX document symbols missing")
-	else
-		print("SKIP: Texlab unavailable; testing built-in LaTeX fallback")
-	end
-	assert(vim.wo.wrap and vim.wo.spell)
-	vim.cmd("write")
-	assert(table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n") == tex, "LaTeX reformatted on save")
-	if texlab then
-		assert(texlab.config.settings.texlab.build.onSave == false)
-	end
-	assert(not vim.uv.fs_stat(scratch .. "/sample.aux"), "Unexpected LaTeX build")
 	assert(vim.v.errmsg == "", vim.v.errmsg)
 	print(
-		"PASS: language servers, Typst diagnostics, formatting, bilingual spelling, unsaved-buffer lint, and external builds"
+		"PASS: language servers, Typst diagnostics, formatting, bilingual spelling, unsaved-buffer lint, and Typst preview tools"
 	)
 end, debug.traceback)
 for _, client in ipairs(vim.lsp.get_clients()) do

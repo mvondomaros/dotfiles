@@ -1,0 +1,113 @@
+#!/bin/sh
+# Explicitly update this checkout, then reapply selected parts of the setup.
+set -eu
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+check=false
+pull=true
+tools=false
+editor=false
+agents=false
+backup=false
+for option in "$@"; do
+    case $option in
+        --check) check=true ;;
+        --no-pull) pull=false ;;
+        --all) tools=true; editor=true; agents=true ;;
+        --tools) tools=true ;;
+        --editor) editor=true ;;
+        --agents) agents=true ;;
+        --backup) backup=true ;;
+        --help)
+            cat <<'HELP'
+Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents] [--backup]
+
+Default: fast-forward the current branch from its upstream and reapply config links.
+  --check    Fetch and show incoming commits and selected steps, without applying them.
+  --no-pull  Apply the current checkout; also works with uncommitted local changes.
+  --all      Select --tools, --editor, and --agents together.
+  --tools    Update CLI core tools and regenerate cached shell completions.
+  --editor   Update Neovim/editor tools and restore pinned plugins, parsers, spelling.
+  --agents   Update Codex CLI and Claude Code.
+  --backup   Preserve and replace conflicting configuration files or old links.
+
+Use --editor for machines with the full Neovim setup. Profiles are explicit per run.
+Git updates require a clean checkout and no unpublished or diverging commits.
+HELP
+            exit 0 ;;
+        *) printf 'Unknown option: %s\n' "$option" >&2; exit 2 ;;
+    esac
+done
+require_clean_checkout() {
+    changes=$(git -C "$repo_dir" status --porcelain --untracked-files=normal --ignore-submodules=none)
+    if [ -n "$changes" ]; then
+        printf 'Checkout has local changes; commit or resolve them before updating:\n%s\n' "$changes" >&2
+        exit 1
+    fi
+}
+if [ "$pull" = true ]; then
+    command -v git >/dev/null 2>&1 || { printf 'Git is required to update the checkout.\n' >&2; exit 1; }
+    branch=$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD) || {
+        printf 'Detached HEAD: select a branch before updating.\n' >&2; exit 1;
+    }
+    upstream=$(git -C "$repo_dir" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}') || {
+        printf 'Configure an upstream for %s before updating.\n' "$branch" >&2; exit 1;
+    }
+    remote=$(git -C "$repo_dir" config --get "branch.$branch.remote")
+    initial_head=$(git -C "$repo_dir" rev-parse HEAD)
+    require_clean_checkout
+    git -C "$repo_dir" fetch --no-recurse-submodules -- "$remote"
+    require_clean_checkout
+    if [ "$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD)" != "$branch" ] || \
+        [ "$(git -C "$repo_dir" rev-parse HEAD)" != "$initial_head" ]; then
+        printf 'Checkout moved during fetch; rerun the updater from the intended branch.\n' >&2
+        exit 1
+    fi
+    # Inspect divergence before touching the checked-out files or running tools.
+    ahead=$(git -C "$repo_dir" rev-list --count "$upstream..HEAD")
+    behind=$(git -C "$repo_dir" rev-list --count "HEAD..$upstream")
+    if [ "$ahead" -ne 0 ]; then
+        printf 'Branch %s has %s local-only commits (%s incoming); resolve this before updating.\n' "$branch" "$ahead" "$behind" >&2
+        exit 1
+    fi
+    printf 'Git: %s incoming commit(s) from %s.\n' "$behind" "$upstream"
+    if [ "$behind" -ne 0 ]; then
+        git -C "$repo_dir" log --oneline "HEAD..$upstream"
+    fi
+    if [ "$check" = false ]; then
+        git -C "$repo_dir" -c submodule.recurse=false merge --ff-only -- "$upstream"
+        # Execute the newly checked-out updater, not the old shell script body.
+        set -- --no-pull
+        [ "$tools" = false ] || set -- "$@" --tools
+        [ "$editor" = false ] || set -- "$@" --editor
+        [ "$agents" = false ] || set -- "$@" --agents
+        [ "$backup" = false ] || set -- "$@" --backup
+        exec "$repo_dir/tools/update-dotfiles" "$@"
+    fi
+fi
+printf 'Plan: reapply configuration links%s.\n' "$([ "$backup" = false ] || printf ' with backups for conflicts')"
+[ "$tools" = false ] || printf 'Plan: update CLI core and regenerate shell completions.\n'
+[ "$editor" = false ] || printf 'Plan: update editor tools and restore pinned plugins, parsers, spelling.\n'
+[ "$agents" = false ] || printf 'Plan: update Codex CLI and Claude Code.\n'
+if [ "$check" = true ]; then
+    printf 'Check complete; no configuration, package, or plugin changes applied.\n'
+    exit 0
+fi
+# Make tools available in this process even before opening a fresh shell.
+for dir in "$HOME/.local/bin" "$HOME/.pixi/bin" /opt/homebrew/bin /usr/local/bin; do
+    case :$PATH: in *:"$dir":*) ;; *) [ ! -d "$dir" ] || PATH="$PATH:$dir" ;; esac
+done
+export PATH
+if [ "$tools" = true ]; then "$repo_dir/tools/update-tools"; fi
+if [ "$editor" = true ]; then
+    if [ "$tools" = false ]; then "$repo_dir/tools/update-tools" nvim; fi
+    "$repo_dir/tools/update-tools" --editor
+fi
+if [ "$agents" = true ]; then "$repo_dir/tools/update-tools" --agents; fi
+if [ "$backup" = true ]; then
+    "$repo_dir/tools/install-dotfiles" --backup
+else
+    "$repo_dir/tools/install-dotfiles"
+fi
+if [ "$tools" = true ]; then "$repo_dir/tools/setup-shell"; fi
+if [ "$editor" = true ]; then "$repo_dir/tools/setup-editor" --parsers --spell; fi
+printf 'Requested update steps finished. Restart shells and editors to load the changes.\n'

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Offline tests with disposable HOME, config, state, PATH, and release archives."""
 import hashlib
+import gzip
 import io
+import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -16,6 +19,7 @@ REPO = Path(__file__).resolve().parents[1]
 NVIM = shutil.which('nvim')
 VIM = shutil.which('vim')
 FISH = shutil.which('fish')
+GIT = shutil.which('git')
 
 class DotfilesTests(unittest.TestCase):
     maxDiff = None
@@ -29,7 +33,7 @@ class DotfilesTests(unittest.TestCase):
         self.repo.mkdir()
         for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'brew', 'vim-colors']:
             shutil.copytree(REPO / name, self.repo / name, ignore=shutil.ignore_patterns('local', '__pycache__'))
-        for name in ['starship.toml', 'vimrc']:
+        for name in ['starship.toml', 'vimrc', '.gitignore']:
             shutil.copy2(REPO / name, self.repo / name)
         self.bin = self.root / 'bin'
         self.bin.mkdir()
@@ -37,7 +41,8 @@ class DotfilesTests(unittest.TestCase):
                         XDG_CONFIG_HOME=str(self.home / '.config'),
                         XDG_DATA_HOME=str(self.home / '.local/share'),
                         XDG_CACHE_HOME=str(self.home / '.cache'),
-                        XDG_STATE_HOME=str(self.home / '.local/state'), TERM='xterm-256color')
+                        XDG_STATE_HOME=str(self.home / '.local/state'),
+                        TMPDIR=str(self.root), TERM='xterm-256color')
         self.mock('uname', 'case "$1" in -m) echo x86_64 ;; *) echo Linux ;; esac')
 
     def mock(self, name, body):
@@ -54,8 +59,173 @@ class DotfilesTests(unittest.TestCase):
     def install(self, *args):
         return self.run_command([str(self.repo / 'tools/install-dotfiles')] + list(args))
 
+    def updater_helpers(self, real_installer=False):
+        self.update_log = self.root / 'update.log'
+        self.env['DOTFILES_UPDATE_LOG'] = str(self.update_log)
+        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor']:
+            if name == 'install-dotfiles' and real_installer:
+                continue
+            helper = self.repo / 'tools' / name
+            helper.write_text('#!/bin/sh\nprintf "%s\\n" "' + name + ' $*" >> "$DOTFILES_UPDATE_LOG"\n')
+            helper.chmod(0o755)
+        self.mock('git', 'exec ' + shlex.quote(GIT) + ' "$@"')
+
+    def updater_git_fixture(self):
+        origin = self.root / 'upstream.git'
+        self.run_command([GIT, 'init', '--bare', str(origin)])
+        self.run_command([GIT, 'init', str(self.repo)])
+        self.run_command([GIT, '-C', str(self.repo), 'checkout', '-b', 'main'])
+        self.git_commit(self.repo, 'initial checkout')
+        self.run_command([GIT, '-C', str(self.repo), 'remote', 'add', 'origin', str(origin)])
+        self.run_command([GIT, '-C', str(self.repo), 'push', '-u', 'origin', 'main'])
+        self.run_command([GIT, '-C', str(origin), 'symbolic-ref', 'HEAD', 'refs/heads/main'])
+        return origin
+
+    def git_commit(self, directory, message):
+        self.run_command([GIT, '-C', str(directory), 'add', '.'])
+        self.run_command([GIT, '-C', str(directory), '-c', 'user.name=Dotfiles Test',
+                          '-c', 'user.email=dotfiles@example.invalid', 'commit', '-m', message])
+        return self.run_command([GIT, '-C', str(directory), 'rev-parse', 'HEAD']).stdout.strip()
+
+    def update_dotfiles(self, *args, code=0):
+        return self.run_command([str(self.repo / 'tools/update-dotfiles')] + list(args), code=code)
+
     def bash(self, command, interactive=False):
         return self.run_command(['/bin/bash', '--noprofile', '--norc', '-ic' if interactive else '-c', command])
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_preview_reexec_and_old_git_link_migration(self):
+        self.updater_helpers(real_installer=True)
+        installer = self.repo / 'tools/install-dotfiles'
+        current_installer = installer.read_text()
+        original_installer = (REPO / 'tests/fixtures/install-dotfiles-b4dcc97').read_text()
+        installer.write_text(original_installer)
+        self.install('--host', 'marc3a')
+        private = self.home / '.config/dotfiles/local/gitconfig'
+        private.write_text('[dotfiles]\nprobe = preserved\n')
+        git_dir = self.home / '.config/git'
+        self.assertTrue(git_dir.is_symlink())
+        origin = self.updater_git_fixture()
+        original = self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip()
+        release = self.root / 'release'
+        self.run_command([GIT, 'clone', str(origin), str(release)])
+        (release / 'tools/install-dotfiles').write_text(current_installer)
+        updater = release / 'tools/update-dotfiles'
+        updater.write_text(updater.read_text().replace('set -eu\n',
+                           'set -eu\nprintf "new-updater\\n" >> "$DOTFILES_UPDATE_LOG"\n', 1))
+        released = self.git_commit(release, 'migrate Git links and refresh updater')
+        self.run_command([GIT, '-C', str(release), 'push'])
+        profiles = ['--backup', '--all']
+        result = self.update_dotfiles('--check', *profiles)
+        self.assertIn('1 incoming commit', result.stdout)
+        self.assertFalse(self.update_log.exists())
+        self.assertTrue(git_dir.is_symlink())
+        self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), original)
+        self.update_dotfiles(*profiles)
+        self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), released)
+        self.assertEqual(self.update_log.read_text().splitlines(), [
+            'new-updater', 'update-tools ', 'update-tools --editor', 'update-tools --agents',
+            'setup-shell ', 'setup-editor --parsers --spell'])
+        self.assertFalse(git_dir.is_symlink())
+        self.assertTrue((git_dir / 'config').is_symlink())
+        self.assertEqual(self.run_command([GIT, 'config', '--file', str(git_dir / 'config'),
+                                           '--includes', '--get', 'dotfiles.probe']).stdout.strip(), 'preserved')
+        self.assertEqual((self.home / '.config/dotfiles/local/host').read_text(), 'marc3a\n')
+        self.assertEqual(len(list((self.home / '.local/state/dotfiles/backups').glob('*/.config/git'))), 1)
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_rejects_dirty_detached_and_untracked(self):
+        self.updater_helpers()
+        origin = self.updater_git_fixture()
+        origin.rename(self.root / 'offline-origin')
+        file = self.repo / 'vimrc'
+        before = file.read_bytes()
+        file.write_bytes(before + b'\n" local change\n')
+        result = self.update_dotfiles(code=1)
+        self.assertIn('Checkout has local changes', result.stderr)
+        self.assertEqual(file.read_bytes(), before + b'\n" local change\n')
+        self.run_command([GIT, '-C', str(self.repo), 'add', 'vimrc'])
+        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        self.run_command([GIT, '-C', str(self.repo), 'reset', '--', 'vimrc'])
+        file.write_bytes(before)
+        unknown = self.repo / 'tools/untracked-file'
+        unknown.write_text('preserve me\n')
+        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        unknown.unlink()
+        self.run_command([GIT, '-C', str(self.repo), 'checkout', '--detach'])
+        self.assertIn('Detached HEAD', self.update_dotfiles(code=1).stderr)
+        self.assertFalse(self.update_log.exists())
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_preserves_local_commits_and_divergence(self):
+        self.updater_helpers()
+        origin = self.updater_git_fixture()
+        release = self.root / 'release'
+        self.run_command([GIT, 'clone', str(origin), str(release)])
+        (self.repo / 'vimrc').write_text('" local commit\n')
+        local = self.git_commit(self.repo, 'local work')
+        result = self.update_dotfiles(code=1)
+        self.assertIn('1 local-only commits (0 incoming)', result.stderr)
+        (release / 'vimrc').write_text('" upstream commit\n')
+        self.git_commit(release, 'upstream work')
+        self.run_command([GIT, '-C', str(release), 'push'])
+        result = self.update_dotfiles(code=1)
+        self.assertIn('1 local-only commits (1 incoming)', result.stderr)
+        self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), local)
+        self.assertFalse(self.update_log.exists())
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_requires_upstream_and_stops_on_fetch_failure(self):
+        self.updater_helpers()
+        origin = self.updater_git_fixture()
+        head = self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip()
+        self.run_command([GIT, '-C', str(self.repo), 'branch', '--unset-upstream'])
+        self.assertIn('Configure an upstream', self.update_dotfiles(code=1).stderr)
+        self.run_command([GIT, '-C', str(self.repo), 'branch', '--set-upstream-to=origin/main'])
+        origin.rename(self.root / 'offline-origin')
+        self.update_dotfiles(code=128)
+        self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), head)
+        self.assertFalse(self.update_log.exists())
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_catches_changes_created_during_fetch(self):
+        self.updater_helpers()
+        self.updater_git_fixture()
+        self.env['DOTFILES_UPDATE_REPO'] = str(self.repo)
+        self.mock('git', '''
+case "$*" in *" fetch "*)
+    ''' + shlex.quote(GIT) + ''' "$@" || exit
+    printf '\\n" edited during fetch\\n' >> "$DOTFILES_UPDATE_REPO/vimrc"
+    exit ;;
+esac
+exec ''' + shlex.quote(GIT) + ''' "$@"''')
+        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        self.assertIn('edited during fetch', (self.repo / 'vimrc').read_text())
+        self.assertFalse(self.update_log.exists())
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_self_update_profiles_are_explicit_and_failures_stop(self):
+        self.updater_helpers()
+        self.update_dotfiles('--no-pull', '--check', '--tools', '--editor', '--agents')
+        self.assertFalse(self.update_log.exists())
+        self.update_dotfiles('--no-pull')
+        self.assertEqual(self.update_log.read_text(), 'install-dotfiles \n')
+        self.update_log.unlink()
+        self.update_dotfiles('--no-pull', '--editor', '--backup')
+        self.assertEqual(self.update_log.read_text().splitlines(), [
+            'update-tools nvim', 'update-tools --editor', 'install-dotfiles --backup',
+            'setup-editor --parsers --spell'])
+        self.update_log.unlink()
+        self.update_dotfiles('--no-pull', '--all', '--backup')
+        self.assertEqual(self.update_log.read_text().splitlines(), [
+            'update-tools ', 'update-tools --editor', 'update-tools --agents',
+            'install-dotfiles --backup', 'setup-shell ', 'setup-editor --parsers --spell'])
+        self.update_log.unlink()
+        helper = self.repo / 'tools/update-tools'
+        helper.write_text(helper.read_text() + 'test "$*" != --editor || exit 9\n')
+        self.update_dotfiles('--no-pull', '--tools', '--editor', '--agents', code=9)
+        self.assertEqual(self.update_log.read_text().splitlines(), ['update-tools ', 'update-tools --editor'])
+        self.update_dotfiles('--nonsense', code=2)
 
     def test_install_idempotence_and_private_selection(self):
         self.install('--host', 'marc3a')
@@ -75,6 +245,37 @@ class DotfilesTests(unittest.TestCase):
         backups = list((self.home / '.local/state/dotfiles/backups').glob('*/.bashrc'))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_text(), '# site settings\n')
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_private_git_include_with_external_checkout(self):
+        for config in [self.home / '.config', self.root / 'custom config']:
+            with self.subTest(config=config):
+                self.env['XDG_CONFIG_HOME'] = str(config)
+                self.install()
+                private = config / 'dotfiles/local/gitconfig'
+                private.write_text('[dotfiles]\nprobe = private\n')
+                result = self.run_command([GIT, 'config', '--file', str(config / 'git/config'),
+                                           '--includes', '--get', 'dotfiles.probe'])
+                self.assertEqual(result.stdout.strip(), 'private')
+
+    @unittest.skipUnless(GIT, 'Git unavailable')
+    def test_git_directory_symlink_migration_requires_backup(self):
+        git_dir = self.home / '.config/git'
+        git_dir.parent.mkdir(parents=True)
+        git_dir.symlink_to(self.repo / 'git', target_is_directory=True)
+        result = self.install()
+        self.assertTrue(git_dir.is_symlink())
+        self.assertIn('skip:', result.stderr)
+        private = self.home / '.config/dotfiles/local/gitconfig'
+        private.write_text('[dotfiles]\nprobe = migrated\n')
+        self.install('--backup')
+        self.assertFalse(git_dir.is_symlink())
+        backups = list((self.home / '.local/state/dotfiles/backups').glob('*/.config/git'))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(os.readlink(backups[0]), str(self.repo / 'git'))
+        result = self.run_command([GIT, 'config', '--file', str(git_dir / 'config'),
+                                   '--includes', '--get', 'dotfiles.probe'])
+        self.assertEqual(result.stdout.strip(), 'migrated')
 
     def test_layers_quiet_noninteractive_and_path(self):
         self.install('--host', 'marc3a')
@@ -112,6 +313,31 @@ class DotfilesTests(unittest.TestCase):
         self.assertNotIn('UNEXPECTED_DOWNLOAD', result.stderr)
         self.assertFalse((self.home / '.local/share/dotfiles/tools').exists())
 
+    def test_release_snapshots_are_verified_complete_and_unique(self):
+        entries = set()
+        tools = {}
+        for line in (self.repo / 'tools/linux-releases.txt').read_text().splitlines():
+            if not line.strip() or line.startswith('#'):
+                continue
+            fields = line.split()
+            self.assertEqual(len(fields), 4, line)
+            tool, arch, digest, url = fields
+            self.assertNotIn((tool, arch), entries)
+            entries.add((tool, arch))
+            self.assertIn(arch, ['x86_64', 'aarch64'])
+            self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            if tool == 'claude':
+                self.assertRegex(url, r'^https://downloads\.claude\.ai/claude-code-releases/\d+\.\d+\.\d+/linux-(x64|arm64)/claude$')
+            elif tool == 'tree-sitter':
+                self.assertRegex(url, r'^https://conda\.anaconda\.org/conda-forge/linux-(64|aarch64)/tree-sitter-cli-\d+\.\d+\.\d+-\w+\.conda$')
+            else:
+                self.assertRegex(url, r'^https://github\.com/[\w.-]+/[\w.-]+/releases/download/(rust-)?v?\d[^/]*/[^/]+$')
+            tools.setdefault(tool, set()).add(arch)
+        for tool in ['pixi', 'lazygit', 'rg', 'fd', 'atuin', 'eza', 'nvim', 'starship', 'ruff', 'ty']:
+            self.assertIn(tool, tools)
+        for tool, architectures in tools.items():
+            self.assertEqual(architectures, {'x86_64', 'aarch64'}, tool)
+
     def test_verified_install_failed_update_preserves_binary(self):
         archive = self.root / 'fixture.tar.gz'
         with tarfile.open(str(archive), 'w:gz') as out:
@@ -148,20 +374,131 @@ class DotfilesTests(unittest.TestCase):
         self.run_command([str(self.repo / 'tools/install-tools'), 'rg'], extra=extra)
         self.assertNotIn('install ripgrep', log.read_text())
         self.run_command([str(self.repo / 'tools/update-tools'), 'rg'], extra=extra)
-        self.assertIn('upgrade ripgrep', log.read_text())
+        self.assertIn('upgrade --formula ripgrep', log.read_text())
         self.assertNotIn('global', log.read_text())
 
     def test_editor_profile_is_explicit_and_scoped(self):
         result = self.run_command([str(self.repo / 'tools/install-tools'), '--editor', '--check'])
-        for tool in ['shfmt', 'shellcheck', 'stylua']:
+        for tool in ['shfmt', 'shellcheck', 'stylua', 'tree-sitter', 'tinymist', 'typst', 'websocat']:
             self.assertIn(tool, result.stdout)
-        for tool in ['pixi', 'nvim', 'bash-language-server', 'fish-lsp', 'texlab', 'tinymist', 'typst']:
+        for tool in ['pixi', 'nvim', 'bash-language-server', 'fish-lsp', 'texlab', 'codex', 'claude']:
             self.assertNotIn(tool, result.stdout)
         self.run_command([str(self.repo / 'tools/install-tools'), '--editor', 'rg'], code=2)
         self.mock('uname', 'echo Darwin')
         self.mock('brew', 'printf "%s\\n" "$*"')
         result = self.run_command([str(self.repo / 'tools/install-tools'), '--editor'])
         self.assertIn('bundle --no-upgrade --file=' + str(self.repo / 'brew/editor.Brewfile'), result.stdout)
+
+    def test_agents_profile_scope_and_macos_casks(self):
+        result = self.run_command([str(self.repo / 'tools/update-tools'), '--agents', '--check'])
+        self.assertIn('codex', result.stdout)
+        self.assertIn('claude', result.stdout)
+        for tool in ['pixi', 'nvim', 'tinymist', 'typst']:
+            self.assertNotIn(tool, result.stdout)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--editor', '--agents'], code=2)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--agents', 'codex'], code=2)
+        self.mock('uname', 'echo Darwin')
+        self.mock('brew', 'printf "%s\\n" "$*"')
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--agents'])
+        self.assertIn('/brew/agents.Brewfile', result.stdout)
+        result = self.run_command([str(self.repo / 'tools/update-tools'), 'claude', 'codex'])
+        self.assertIn('upgrade --cask claude-code', result.stdout)
+        self.assertIn('upgrade --cask codex', result.stdout)
+
+    def test_verified_gzip_parser_generator(self):
+        content = b'#!/bin/sh\necho "tree-sitter 0.27.2"\n'
+        archive = self.root / 'tree-sitter-x86_64.gz'
+        archive.write_bytes(gzip.compress(content))
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        (self.repo / 'tools/linux-releases.txt').write_text('tree-sitter x86_64 ' + digest + ' https://example.invalid/releases/download/v0.27.2/tree-sitter.gz\n')
+        self.run_command([str(self.repo / 'tools/install-tools'), 'tree-sitter'], extra={'DOTFILES_DOWNLOAD_DIR': str(self.root)})
+        self.assertIn('0.27.2', self.run_command([str(self.home / '.local/bin/tree-sitter'), '--version']).stdout)
+
+    def test_private_parser_generator_install_update_and_rollback(self):
+        archive = self.root / 'tree-sitter-x86_64.conda'
+        manifest = self.repo / 'tools/linux-releases.txt'
+        def pin(version):
+            archive.write_text('#!/bin/sh\necho "tree-sitter ' + version + '"\n')
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            manifest.write_text('tree-sitter x86_64 ' + digest +
+                                ' https://conda.anaconda.org/conda-forge/linux-64/tree-sitter-cli-' + version + '-test_0.conda\n')
+        self.mock('pixi', '''
+printf '%s\\n%s\\n' "$PIXI_HOME" "$*" >> "$PIXI_TEST_LOG"
+mkdir -p "$PIXI_HOME/bin"
+test "${PIXI_TEST_FAIL:-0}" = 0 || exit 9
+while [ "$#" -gt 0 ]; do
+    if [ "$1" = --path ]; then
+        shift
+        cp "$1" "$PIXI_HOME/bin/tree-sitter" || exit
+        chmod +x "$PIXI_HOME/bin/tree-sitter"
+        exit
+    fi
+    shift
+done
+exit 8''')
+        log = self.root / 'pixi.log'
+        extra = {'DOTFILES_DOWNLOAD_DIR': str(self.root), 'PIXI_TEST_LOG': str(log)}
+        store = self.home / '.local/share/dotfiles/tools'
+        binary = self.home / '.local/bin/tree-sitter'
+        pin('0.27.2')
+        self.run_command([str(self.repo / 'tools/install-tools'), 'tree-sitter'], extra=extra)
+        old_home = Path((store / 'tree-sitter/.pixi-home').read_text().strip())
+        self.assertEqual(old_home.parent, store)
+        self.assertFalse((self.home / '.pixi').exists())
+        self.assertIn('--path ', log.read_text())
+        self.assertIn('tree-sitter-cli-0.27.2-test_0.conda', log.read_text())
+        self.assertIn('0.27.2', self.run_command([str(binary), '--version']).stdout)
+        self.assertIn('0.27.2', self.run_command([str(self.repo / 'tools/update-tools'), '--check', 'tree-sitter']).stdout)
+
+        pin('0.28.0')
+        self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], code=1,
+                         extra=dict(extra, PIXI_TEST_FAIL='1'))
+        self.assertTrue(old_home.is_dir())
+        self.assertEqual(list(store.glob('.tree-sitter.*')), [old_home])
+        self.assertIn('0.27.2', self.run_command([str(binary), '--version']).stdout)
+        # Verification fails before Pixi sees the package or any launcher moves.
+        prior_log = log.read_text()
+        manifest.write_text(manifest.read_text().replace(hashlib.sha256(archive.read_bytes()).hexdigest(), '0' * 64))
+        result = self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], code=1, extra=extra)
+        self.assertIn('Checksum mismatch', result.stderr)
+        self.assertEqual(log.read_text(), prior_log)
+        pin('0.28.0')
+        self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], extra=extra)
+        self.assertFalse(old_home.exists())
+        self.assertEqual(len(list(store.glob('.tree-sitter.*'))), 1)
+        self.assertIn('0.28.0', self.run_command([str(binary), '--version']).stdout)
+
+    def test_codex_package_retains_helpers_and_does_not_downgrade(self):
+        archive = self.root / 'codex-x86_64.tar.gz'
+        with tarfile.open(archive, 'w:gz') as out:
+            for name in ['bin/codex', 'bin/codex-exec-server', 'codex-resources/bwrap']:
+                content = b'#!/bin/sh\necho "codex 0.167.2"\n'
+                item = tarfile.TarInfo(name)
+                item.mode = 0o755
+                item.size = len(content)
+                out.addfile(item, io.BytesIO(content))
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        (self.repo / 'tools/linux-releases.txt').write_text('codex x86_64 ' + digest + ' https://example.invalid/releases/download/rust-v0.167.2/codex-package.tar.gz\n')
+        extra = {'DOTFILES_DOWNLOAD_DIR': str(self.root)}
+        self.run_command([str(self.repo / 'tools/install-tools'), '--adopt', 'codex'], extra=extra)
+        store = self.home / '.local/share/dotfiles/tools/codex'
+        self.assertTrue((store / 'bin/codex-exec-server').is_file())
+        self.assertTrue((store / 'codex-resources/bwrap').is_file())
+        (store / 'bin/codex').write_text('#!/bin/sh\necho "codex 99.0.0"\n')
+        (store / '.dotfiles-managed').write_text('previous pin')
+        result = self.run_command([str(self.repo / 'tools/update-tools'), 'codex'], extra=extra)
+        self.assertIn('newer-than-pin', result.stdout)
+
+    def test_claude_launcher_keeps_updates_managed(self):
+        binary = self.root / 'claude-x86_64'
+        binary.write_text('#!/bin/sh\necho "claude 2.1.311 updater=${DISABLE_AUTOUPDATER:-unset}"\n')
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        (self.repo / 'tools/linux-releases.txt').write_text('claude x86_64 ' + digest + ' https://downloads.claude.ai/claude-code-releases/2.1.311/linux-x64/claude\n')
+        extra = {'DOTFILES_DOWNLOAD_DIR': str(self.root)}
+        self.run_command([str(self.repo / 'tools/install-tools'), 'claude'], extra=extra)
+        result = self.run_command([str(self.home / '.local/bin/claude'), '--version'])
+        self.assertIn('updater=1', result.stdout)
+        self.assertIn('current:', self.run_command([str(self.repo / 'tools/update-tools'), 'claude'], extra=extra).stdout)
 
     def test_verified_raw_zip_xz_editor_downloads(self):
         manifest = self.repo / 'tools/linux-releases.txt'
@@ -305,6 +642,53 @@ class DotfilesTests(unittest.TestCase):
         self.assertNotIn('update', log.read_text())
         self.run_command([str(self.repo / 'tools/update-tools'), '--adopt-all'], code=2, extra=extra)
 
+    @unittest.skipUnless(NVIM and GIT, 'Neovim/Git unavailable')
+    def test_editor_fetches_new_pin_and_reuses_it_offline(self):
+        version = self.run_command([NVIM, '--headless', '-u', 'NONE', '-i', 'NONE',
+                                    '+lua io.write(vim.fn.has("nvim-0.12"))', '+qa'])
+        if version.stdout != '1':
+            self.skipTest('Editor provisioning requires Neovim 0.12+')
+        self.install()
+        remote = self.root / 'lazy-origin'
+        self.run_command([GIT, 'init', str(remote)])
+
+        def commit(message):
+            self.run_command([GIT, '-C', str(remote), '-c', 'user.name=Dotfiles Test',
+                              '-c', 'user.email=dotfiles@example.invalid',
+                              'commit', '--allow-empty', '-m', message])
+            return self.run_command([GIT, '-C', str(remote), 'rev-parse', 'HEAD']).stdout.strip()
+
+        original = commit('original pin')
+        lazy_dir = self.home / '.local/share/nvim/lazy/lazy.nvim'
+        self.run_command([GIT, 'clone', str(remote), str(lazy_dir)])
+        pinned = commit('new pin')
+        fixture = self.repo / 'nvim/lua/plugins/fixture.lua'
+        fixture.write_text('return { "dotfiles-test/fixture-plugin", config = function() error("Do not run plugin config while restoring") end }\n')
+        lock = self.repo / 'nvim/lazy-lock.json'
+        lock.write_text(json.dumps({'lazy.nvim': {'commit': pinned}, 'fixture-plugin': {'commit': pinned}}))
+        original_lock = lock.read_bytes()
+        self.mock('nvim', 'exec ' + shlex.quote(NVIM) + ' "$@"')
+        # Redirect only the missing fixture plugin to a local Git origin.
+        self.env['DOTFILES_TEST_ORIGIN'] = str(remote)
+        self.mock('git', 'case "$*" in *https://github.com/dotfiles-test/fixture-plugin.git*) exec ' +
+                  shlex.quote(GIT) + ' clone --no-checkout "$DOTFILES_TEST_ORIGIN" "$5" ;; esac\nexec ' + shlex.quote(GIT) + ' "$@"')
+        unavailable = self.root / 'unavailable-origin'
+        remote.rename(unavailable)
+        setup = [str(self.repo / 'tools/setup-editor')]
+        self.run_command(setup, code=128)
+        result = self.run_command([GIT, '-C', str(lazy_dir), 'rev-parse', 'HEAD'])
+        self.assertEqual(result.stdout.strip(), original)
+        unavailable.rename(remote)
+        self.run_command(setup)
+        result = self.run_command([GIT, '-C', str(lazy_dir), 'rev-parse', 'HEAD'])
+        self.assertEqual(result.stdout.strip(), pinned)
+        fixture_dir = lazy_dir.parent / 'fixture-plugin'
+        result = self.run_command([GIT, '-C', str(fixture_dir), 'rev-parse', 'HEAD'])
+        self.assertEqual(result.stdout.strip(), pinned)
+        self.assertEqual(lock.read_bytes(), original_lock, 'Adding a plugin changed existing pins')
+        remote.rename(unavailable)
+        self.assertIn('reuse: pinned Neovim plugins', self.run_command(setup).stdout)
+
     @unittest.skipUnless(NVIM, 'Neovim unavailable')
     def test_neovim_offline_basic_and_modern_fallback(self):
         self.install()
@@ -319,6 +703,40 @@ class DotfilesTests(unittest.TestCase):
     @unittest.skipUnless(VIM, 'Vim unavailable')
     def test_vim_standalone(self):
         self.install()
+        project = self.root / 'project with spaces'
+        project.mkdir()
+        (project / 'fallback note.txt').write_text('Before edit\n')
+        script = self.root / 'fallback.vim'
+        script.write_text('''
+execute 'cd ' . fnameescape($DOTFILES_VIM_TEST_DIR)
+call feedkeys(" fffallback\\<Tab>\\<CR>", 'xt')
+call assert_equal('fallback note.txt', expand('%:t'))
+call setline(1, 'Saved through the fallback')
+call feedkeys(' fs', 'xt')
+call assert_equal(['Saved through the fallback'], readfile('fallback note.txt'))
+call feedkeys(' wv', 'xt')
+call assert_equal(2, winnr('$'))
+call feedkeys(' wc', 'xt')
+call assert_equal(1, winnr('$'))
+call feedkeys(' fn', 'xt')
+call assert_equal('', bufname('%'))
+call feedkeys(' bb', 'xt')
+call assert_equal('fallback note.txt', expand('%:t'))
+call assert_match('Window', execute('FallbackHelp'))
+call assert_equal(1, g:loaded_spellfile_plugin)
+call assert_equal('', v:errmsg)
+if !empty(v:errors)
+  call writefile(v:errors, $DOTFILES_VIM_TEST_DIR . '/errors.txt')
+  cquit 1
+endif
+qa!
+''')
+        extra = {'DOTFILES_VIM_TEST_DIR': str(project)}
+        self.run_command([VIM, '-Nu', str(self.home / '.vimrc'), '-n', '-es', '-i', 'NONE', '-S', str(script)], extra=extra)
+        self.assertFalse((project / 'errors.txt').exists())
+        # An incomplete/offline checkout still starts with Vim's built-in theme.
+        (self.repo / 'vim-colors/colors/ayu_light.vim').unlink()
+        shutil.rmtree(self.home / '.local/state/vim/undo')
         self.run_command([VIM, '-Nu', str(self.home / '.vimrc'), '-n', '-es', '-i', 'NONE', '+qa!'])
 
     @unittest.skipUnless(FISH, 'Fish unavailable')

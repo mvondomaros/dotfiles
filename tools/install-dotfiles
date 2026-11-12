@@ -16,6 +16,12 @@ while [ "$#" -gt 0 ]; do
 done
 case $host in *[!a-zA-Z0-9_-]*) printf 'Invalid host name\n' >&2; exit 2 ;; esac
 backup_dir=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups/$(date +%Y%m%d-%H%M%S)-$$
+backup_file() {
+    relative=${1#"$HOME"/}
+    mkdir -p "$backup_dir/$(dirname "$relative")"
+    mv "$1" "$backup_dir/$relative"
+    printf 'backup: %s\n' "$backup_dir/$relative"
+}
 link_file() {
     src=$1
     dst=$2
@@ -28,19 +34,30 @@ link_file() {
             printf 'skip: %s exists (use --backup to preserve and replace it)\n' "$dst" >&2
             return
         fi
-        relative=${dst#"$HOME"/}
-        mkdir -p "$backup_dir/$(dirname "$relative")"
-        mv "$dst" "$backup_dir/$relative"
-        printf 'backup: %s\n' "$backup_dir/$relative"
+        backup_file "$dst"
     fi
     mkdir -p "$(dirname "$dst")"
     ln -s "$src" "$dst"
     printf 'link: %s\n' "$dst"
 }
+link_git_config() {
+    # A symlinked git/ makes ../dotfiles/local resolve inside the checkout.
+    git_dir=$config_home/git
+    if [ -L "$git_dir" ] || { [ -e "$git_dir" ] && [ ! -d "$git_dir" ]; }; then
+        if [ "$backup" = false ]; then
+            printf 'skip: %s must be a real directory (use --backup to preserve and replace it)\n' "$git_dir" >&2
+            return
+        fi
+        backup_file "$git_dir"
+    fi
+    mkdir -p "$git_dir"
+    link_file "$repo_dir/git/config" "$git_dir/config"
+}
 mkdir -p "$config_home" "$config_home/dotfiles/local"
-for entry in bash git atuin eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
+for entry in bash atuin eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
     link_file "$repo_dir/$entry" "$config_home/$entry"
 done
+link_git_config
 for entry in platforms hosts; do
     link_file "$repo_dir/dotfiles/$entry" "$config_home/dotfiles/$entry"
 done

@@ -24,7 +24,6 @@ local ok, err = xpcall(function()
 			"conform.nvim",
 			"gitsigns.nvim",
 			"which-key.nvim",
-			"todo-comments.nvim",
 		},
 	})
 	local parsers = {}
@@ -42,7 +41,7 @@ local ok, err = xpcall(function()
 		{ "sample.py", "python", "value = 1\nprint(value)" },
 		{ "sample.sh", "sh", "#!/bin/bash\nprintf '%s\\n' hello" },
 		{ "sample.md", "markdown", "# Test\n\nA paragraph." },
-		{ "sample.tex", "tex", "\\documentclass{article}\n\\begin{document}\nText.\n\\end{document}" },
+		{ "sample.toml", "toml", 'title = "Test"' },
 		{ "sample.typ", "typst", "= Test\n\nA paragraph." },
 		{ "sample.fish", "fish", "if true\n    echo hello\nend" },
 		{ "sample.txt", "text", "A paragraph." },
@@ -59,6 +58,7 @@ local ok, err = xpcall(function()
 		end
 		vim.cmd("normal! gg")
 		vim.cmd("redraw")
+		assert(vim.v.errmsg == "", vim.v.errmsg)
 	end
 	local conform = require("conform")
 	conform.formatters.dotfiles_test_cat = { command = "/bin/cat", stdin = true }
