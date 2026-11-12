@@ -296,6 +296,20 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertNotIn(str(self.home / '.config/tools'), lines[1].split(':'))
         self.assertEqual(before, set(self.home.rglob('*')))
 
+    def test_marc3a_proxy_for_ssh_preserves_inherited_and_private_settings(self):
+        self.install('--host', 'marc3a')
+        proxy = self.root / 'site-proxy.sh'
+        proxy.write_text('export http_proxy=http://site.invalid:3128\nexport https_proxy="$http_proxy"\n')
+        hook = self.repo / 'dotfiles/hosts/marc3a/env.sh'
+        hook.write_text(hook.read_text().replace('/etc/profile.d/proxy.sh', str(proxy)))
+        command = 'source "$HOME/.bashrc"; printf "%s\\n%s\\n" "${http_proxy:-}" "${https_proxy:-}"'
+        self.assertEqual(self.bash(command).stdout, 'http://site.invalid:3128\nhttp://site.invalid:3128\n')
+        inherited = self.run_command(['/bin/bash', '--noprofile', '--norc', '-c', command],
+                                     extra={'https_proxy': 'http://custom.invalid:8080'})
+        self.assertEqual(inherited.stdout, '\nhttp://custom.invalid:8080\n')
+        (self.home / '.config/dotfiles/local/env.sh').write_text('export https_proxy=http://private.invalid:8080\n')
+        self.assertEqual(self.bash(command).stdout, 'http://site.invalid:3128\nhttp://private.invalid:8080\n')
+
     def test_interactive_fallbacks_and_no_completion_generation(self):
         self.install()
         self.mock('pixi', 'echo UNEXPECTED_PIXI >&2; exit 9')

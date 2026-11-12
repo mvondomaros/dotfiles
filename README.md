@@ -69,6 +69,9 @@ dotfiles/local/vimrc        # Vim and basic Neovim customizations
 The old `~/.bashrc.local` is no longer sourced. Migrate its contents deliberately.
 On Linux, the interactive platform hook makes the site's module command available
 when an initialization file is present; it does not purge or load modules.
+The `marc3a` host hook reads the site's `/etc/profile.d/proxy.sh` when no proxy
+was inherited, so HTTPS tools also work in noninteractive SSH commands. Private
+environment overrides still run afterward.
 Scientific environments belong in a project session or job script, for example:
 
 ```sh
