@@ -62,15 +62,19 @@ local ok, err = xpcall(function()
 	lint("SC2086")
 	vim.bo.modified = false
 
-	edit("sample.fish", "if true\necho hello\nend")
-	if vim.fn.executable("fish-lsp") == 1 then
-		attached("fish_lsp")
+	if vim.fn.executable("fish") == 1 and vim.fn.executable("fish_indent") == 1 then
+		edit("sample.fish", "if true\necho hello\nend")
+		if vim.fn.executable("fish-lsp") == 1 then
+			attached("fish_lsp")
+		end
+		vim.cmd("write")
+		assert(vim.api.nvim_buf_get_lines(0, 1, 2, false)[1] == "    echo hello", "fish_indent did not format")
+		vim.api.nvim_buf_set_lines(0, 0, -1, false, { "if true" })
+		lint("Missing end")
+		vim.bo.modified = false
+	else
+		print("SKIP: optional Fish tools unavailable")
 	end
-	vim.cmd("write")
-	assert(vim.api.nvim_buf_get_lines(0, 1, 2, false)[1] == "    echo hello", "fish_indent did not format")
-	vim.api.nvim_buf_set_lines(0, 0, -1, false, { "if true" })
-	lint("Missing end")
-	vim.bo.modified = false
 
 	if require("config.role").python then
 		edit("sample.py", 'print("clean disk file")')
