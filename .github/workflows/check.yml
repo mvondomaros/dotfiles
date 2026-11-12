@@ -1,0 +1,82 @@
+name: Check dotfiles
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotfiles-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      # Action commits pin the code executed by CI; comments identify releases.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+
+      - name: Install Linux test dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fish vim
+
+      - name: Exercise the pinned Linux Neovim release
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          read -r checksum url < <(awk -v arch="$(uname -m)" '$1 == "nvim" && $2 == arch { print $3, $4; exit }' tools/linux-releases.txt)
+          archive="$RUNNER_TEMP/nvim.tar.gz"
+          unpack="$RUNNER_TEMP/pinned-nvim"
+          curl -fsSL --retry 2 --connect-timeout 10 --max-time 120 "$url" -o "$archive"
+          printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check
+          mkdir -p "$unpack"
+          tar -xzf "$archive" -C "$unpack"
+          executable=$(find "$unpack" -type f -path '*/bin/nvim' -print -quit)
+          test -n "$executable"
+          "$executable" --version
+          printf '%s\n' "$(dirname "$executable")" >> "$GITHUB_PATH"
+          tools/install-tools --editor
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install macOS test dependencies
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew install fish neovim tree-sitter-cli
+          tools/install-tools --editor
+
+      - name: Run offline regression tests
+        run: python3 tests/check_dotfiles.py
+
+      - name: Provision and exercise the full editor
+        env:
+          HOME: ${{ runner.temp }}/dotfiles-home
+          XDG_CONFIG_HOME: ${{ runner.temp }}/dotfiles-home/config
+          XDG_DATA_HOME: ${{ runner.temp }}/dotfiles-home/data
+          XDG_STATE_HOME: ${{ runner.temp }}/dotfiles-home/state
+          XDG_CACHE_HOME: ${{ runner.temp }}/dotfiles-home/cache
+          DOTFILES_NVIM_MODE: auto
+        run: |
+          mkdir -p "$HOME"
+          tools/install-dotfiles
+          tools/setup-editor --parsers
+          nvim --headless -i NONE -c "lua dofile('tests/check_nvim.lua')"
+          nvim --headless -i NONE -c "lua dofile('tests/check_workflows.lua')"
+          git diff --exit-code -- nvim/lazy-lock.json
