@@ -402,6 +402,12 @@ Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
 by `tools/setup-shell`, never by shell startup.
 
+On macOS, the Bash and Fish `top` functions use `TERM=xterm-256color` for that
+command when running in Kitty. Apple's privileged `top` ignores user terminfo
+locations, so installing Kitty's definition in `~/.terminfo` does not fix its
+interactive mode. Other commands retain `TERM=xterm-kitty`; no system files or
+terminal settings need changing.
+
 ## Colors
 
 Ayu Light is the shared default. Kitty, Fish, Starship, Lazygit, Atuin, Eza, and
