@@ -411,11 +411,14 @@ for `top` does not change the remote terminal database.
 
 ## Colors
 
-Ayu Light is the shared default. Kitty, Fish, Starship, Lazygit, Atuin, Eza, and
-fzf use the palette of the pinned `neovim-ayu` light theme: background `#F8F9FA`,
+Ayu Light is the shared default. Kitty, Fish, Starship, Lazygit, Atuin, btop, Eza,
+and fzf use the palette of the pinned `neovim-ayu` light theme: background `#F8F9FA`,
 foreground `#5C6166`, selection `#D3E1F5`. Native application files hold the colors;
 there is no theme generator or startup dependency. The standalone Vim/basic
 Neovim theme uses the same RGB values, with approximations in 256-color terminals.
+
+btop selects the tracked `btop/themes/ayu-light.theme` through `btop/btop.conf`.
+Restart btop after updating its theme.
 
 Fish applies the tracked theme to session globals on every interactive startup,
 so stale universal colors cannot freeze an old theme. Private interactive hooks

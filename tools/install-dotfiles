@@ -57,7 +57,7 @@ link_git_config() {
     link_file "$repo_dir/git/config" "$git_dir/config"
 }
 mkdir -p "$config_home" "$config_home/dotfiles/local"
-for entry in bash atuin eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
+for entry in bash atuin btop eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
     link_file "$repo_dir/$entry" "$config_home/$entry"
 done
 link_git_config

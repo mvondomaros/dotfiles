@@ -8,6 +8,7 @@
 !/README.md
 !/atuin/
 !/bash/
+!/btop/
 !/brew/
 !/eza/
 !/dotfiles/
@@ -29,6 +30,7 @@
 
 # Machine-local state and credentials within managed directories.
 /fish/fish_variables
+/btop/*.log
 /github-copilot/
 /jgit/
 /zenodo/

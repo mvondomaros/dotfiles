@@ -1,0 +1,51 @@
+# Ayu Light, matched to the pinned neovim-ayu palette.
+theme[main_bg]="#F8F9FA"
+theme[main_fg]="#5C6166"
+theme[title]="#5C6166"
+theme[hi_fg]="#FA8D3E"
+theme[selected_bg]="#D3E1F5"
+theme[selected_fg]="#5C6166"
+theme[inactive_fg]="#8A9199"
+theme[graph_text]="#5C6166"
+theme[meter_bg]="#E7EAED"
+theme[proc_misc]="#A37ACC"
+
+# Panel outlines and dividers.
+theme[cpu_box]="#A37ACC"
+theme[mem_box]="#4CBF99"
+theme[net_box]="#399EE6"
+theme[proc_box]="#FA8D3E"
+theme[div_line]="#CCCFD3"
+
+# Cool-to-warm gradients for load and temperature.
+theme[temp_start]="#86B300"
+theme[temp_mid]="#FA8D3E"
+theme[temp_end]="#E65050"
+theme[cpu_start]="#55B4D4"
+theme[cpu_mid]="#A37ACC"
+theme[cpu_end]="#E65050"
+
+# Memory and disk meters.
+theme[free_start]="#4CBF99"
+theme[free_mid]="#86B300"
+theme[free_end]="#6CBF43"
+theme[cached_start]="#55B4D4"
+theme[cached_mid]="#399EE6"
+theme[cached_end]="#478ACC"
+theme[available_start]="#4CBF99"
+theme[available_mid]="#86B300"
+theme[available_end]="#6CBF43"
+theme[used_start]="#F2AE49"
+theme[used_mid]="#FA8D3E"
+theme[used_end]="#E65050"
+
+# Network and process gradients.
+theme[download_start]="#4CBF99"
+theme[download_mid]="#55B4D4"
+theme[download_end]="#399EE6"
+theme[upload_start]="#C788CE"
+theme[upload_mid]="#A37ACC"
+theme[upload_end]="#478ACC"
+theme[process_start]="#399EE6"
+theme[process_mid]="#A37ACC"
+theme[process_end]="#E65050"

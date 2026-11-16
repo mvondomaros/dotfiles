@@ -31,7 +31,7 @@ class DotfilesTests(unittest.TestCase):
         self.home.mkdir()
         self.repo = self.root / 'checkout'
         self.repo.mkdir()
-        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'brew', 'vim-colors']:
+        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'btop', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'brew', 'vim-colors']:
             shutil.copytree(REPO / name, self.repo / name, ignore=shutil.ignore_patterns('local', '__pycache__'))
         for name in ['starship.toml', 'vimrc', '.gitignore']:
             shutil.copy2(REPO / name, self.repo / name)
@@ -232,6 +232,7 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         before = os.readlink(str(self.home / '.bashrc'))
         self.install('--host', 'marc3a')
         self.assertEqual(before, os.readlink(str(self.home / '.bashrc')))
+        self.assertEqual((self.home / '.config/btop').resolve(), self.repo / 'btop')
         self.assertEqual((self.home / '.config/dotfiles/local/host').read_text(), 'marc3a\n')
         self.assertFalse((self.repo / 'dotfiles/local').exists())
 
