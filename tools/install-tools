@@ -36,7 +36,7 @@ if [ "$adopt" = true ] && [ "$adopt_all" = false ] && [ "$#" -eq 0 ]; then
 fi
 requested=$*
 for tool in "$@"; do
-    case $tool in pixi|lazygit|rg|fd|atuin|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|tinymist|typst|tree-sitter|websocat|codex|claude|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
+    case $tool in pixi|lazygit|rg|fd|atuin|btop|eza|nvim|starship|ruff|ty|rsync|shfmt|shellcheck|stylua|tinymist|typst|tree-sitter|websocat|codex|claude|bash-language-server|fish-lsp) ;; *) printf 'Unknown tool: %s\n' "$tool" >&2; exit 2 ;; esac
 done
 # shellcheck source=/dev/null
 . "$repo_dir/tools/role.sh"

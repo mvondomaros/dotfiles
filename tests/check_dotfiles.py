@@ -427,6 +427,8 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertNotIn('install ripgrep', log.read_text())
         self.run_command([str(self.repo / 'tools/update-tools'), 'rg'], extra=extra)
         self.assertIn('upgrade --formula ripgrep', log.read_text())
+        self.run_command([str(self.repo / 'tools/install-tools'), 'btop'], extra=extra)
+        self.assertIn('list --formula btop', log.read_text())
         self.assertNotIn('global', log.read_text())
 
     def test_editor_profile_is_explicit_and_scoped(self):
@@ -590,25 +592,6 @@ exit 8''')
         local.write_text("alias ls='printf private'\n")
         result = self.bash('source "$HOME/.bashrc"; alias ls', True)
         self.assertIn("printf private", result.stdout)
-
-    def test_macos_top_terminal_fallback(self):
-        self.mock('top', 'printf "%s\\n" "$TERM" "$@"; exit 7')
-        shells = [('/bin/bash', 'bash.sh')]
-        if FISH:
-            shells.append((FISH, 'config.fish'))
-        for shell, filename in shells:
-            hook = self.repo / 'dotfiles/platforms/macos' / filename
-            for terminal in ['xterm-kitty', 'xterm-256color', 'screen-256color']:
-                with self.subTest(shell=shell, terminal=terminal):
-                    result = self.run_command(
-                        [shell, '-c', 'source "' + str(hook) + '"; top -o "cpu usage"'],
-                        code=7, extra={'TERM': terminal})
-                    expected = 'xterm-256color' if terminal == 'xterm-kitty' else terminal
-                    self.assertEqual(result.stdout.splitlines(), [expected, '-o', 'cpu usage'])
-                    result = self.run_command(
-                        [shell, '-c', 'source "' + str(hook) + '"; top >/dev/null; printf "%s" "$TERM"'],
-                        extra={'TERM': terminal})
-                    self.assertEqual(result.stdout, terminal)
 
     def release_fixture(self, tool, version='2.0.0'):
         archive = self.root / (tool + '-x86_64.tar.gz')

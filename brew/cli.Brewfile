@@ -1,4 +1,5 @@
 brew "atuin"
+brew "btop"
 brew "eza"
 brew "fd"
 brew "fish"
