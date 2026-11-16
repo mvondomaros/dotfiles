@@ -3,10 +3,14 @@ local scratch = vim.fn.tempname() .. "/project with spaces"
 local original_executable, original_select = vim.fn.executable, vim.ui.select
 local original_toggle, original_visit
 local errors = {}
+local build_finished = false
 local original_notify = vim.notify
 vim.notify = function(message, level, ...)
 	if level == vim.log.levels.ERROR then
 		errors[#errors + 1] = message
+	end
+	if message == "Built " .. scratch .. "/main.pdf" then
+		build_finished = true
 	end
 	return original_notify(message, level, ...)
 end
@@ -57,12 +61,15 @@ local ok, err = xpcall(function()
 	print("PASS: agent selection and per-project terminal routing without live agent calls")
 
 	vim.cmd("DocumentBuild")
+	-- Typst can create the output before it finishes writing the PDF. Wait for
+	-- the process completion notification before inspecting its contents.
 	assert(
 		vim.wait(15000, function()
-			return vim.uv.fs_stat(scratch .. "/main.pdf") ~= nil
+			return build_finished or #errors > 0
 		end, 50),
-		"PDF build failed"
+		"PDF build did not finish"
 	)
+	assert(build_finished, "PDF build failed: " .. table.concat(errors, "\n"))
 	local pdf = assert(io.open(scratch .. "/main.pdf", "rb"))
 	assert(pdf:read(5) == "%PDF-")
 	pdf:close()
