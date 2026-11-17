@@ -1,0 +1,101 @@
+#!/bin/sh
+# Explicit workstation setup. Shell/editor startup never installs extensions.
+set -eu
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+check=false
+update=false
+backup=false
+for option in "$@"; do
+    case $option in
+        --check) check=true ;;
+        --update) update=true ;;
+        --backup) backup=true ;;
+        --help)
+            printf 'Usage: setup-vscode [--check] [--update] [--backup]\n\nInstall declared extensions and link configuration. Keep Settings Sync off.\nExtension packs do not add undeclared extensions.\n--check reports missing tools/links and missing or undeclared extensions.\n--update refreshes declared extensions; other extensions are preserved.\n--backup preserves existing configuration before replacing it with links.\n'
+            exit 0 ;;
+        *) printf 'Unknown option: %s\n' "$option" >&2; exit 2 ;;
+    esac
+done
+# shellcheck source=tools/role.sh
+. "$repo_dir/tools/role.sh"
+role=$(dotfiles_read_role)
+if [ "$role" = server ]; then
+    printf 'VS Code setup is skipped for the server role.\n'
+    exit 0
+fi
+for dir in "$HOME/.local/bin" /opt/homebrew/bin /usr/local/bin; do
+    case :$PATH: in *:"$dir":*) ;; *) [ ! -d "$dir" ] || PATH="$PATH:$dir" ;; esac
+done
+export PATH
+code_cli=$(command -v code || :)
+if [ -z "$code_cli" ]; then
+    for app in /Applications "$HOME/Applications"; do
+        candidate="$app/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        if [ -x "$candidate" ]; then code_cli=$candidate; break; fi
+    done
+fi
+if [ -z "$code_cli" ]; then
+    printf 'VS Code is missing. On macOS, install the visual-studio-code cask from brew/workstation.Brewfile; on Linux use your desktop package manager.\n' >&2
+    exit 1
+fi
+missing=false
+tools='pixi ruff ty tinymist shfmt shellcheck stylua'
+if [ "$(uname -s)" = Darwin ]; then tools="$tools fish"; fi
+for tool in $tools; do
+    if command -v "$tool" >/dev/null 2>&1; then
+        printf 'tool: %s (%s)\n' "$tool" "$(command -v "$tool")"
+    else
+        printf 'missing tool: %s (run tools/install-tools and tools/install-tools --editor)\n' "$tool" >&2
+        missing=true
+    fi
+done
+installed=$("$code_cli" --list-extensions)
+installed=$(printf '%s\n' "$installed" | tr '[:upper:]' '[:lower:]')
+extensions=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$repo_dir/vscode/extensions.txt")
+for extension in $extensions; do
+    if printf '%s\n' "$installed" | grep -Fqx "$(printf '%s' "$extension" | tr '[:upper:]' '[:lower:]')"; then
+        printf 'extension: %s\n' "$extension"
+    elif [ "$check" = true ]; then
+        printf 'missing extension: %s\n' "$extension"
+        missing=true
+    fi
+done
+if [ "$check" = true ]; then
+    for extension in $installed; do
+        if ! printf '%s\n' "$extensions" | tr '[:upper:]' '[:lower:]' | grep -Fqx "$extension"; then
+            printf 'undeclared extension: %s\n' "$extension" >&2
+            missing=true
+        fi
+    done
+    case $(uname -s) in
+        Darwin) code_user="$HOME/Library/Application Support/Code/User" ;;
+        Linux) code_user="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User" ;;
+        *) printf 'Unsupported VS Code platform.\n' >&2; exit 1 ;;
+    esac
+    for entry in settings.json keybindings.json; do
+        target=$code_user/$entry
+        if [ -L "$target" ] && [ "$target" -ef "$repo_dir/vscode/$entry" ]; then
+            printf 'config: %s\n' "$target"
+        else
+            printf 'unmanaged config: %s (run tools/setup-vscode --backup)\n' "$target" >&2
+            missing=true
+        fi
+    done
+    [ "$missing" = false ]
+    exit
+fi
+if [ "$missing" = true ]; then exit 1; fi
+for extension in $extensions; do
+    # Every wanted companion is in the manifest. In particular, the Python
+    # extension must not bring Pylance back during installation or updates.
+    if [ "$update" = true ]; then
+        "$code_cli" --install-extension "$extension" --do-not-include-pack-dependencies --force
+    elif ! printf '%s\n' "$installed" | grep -Fqx "$(printf '%s' "$extension" | tr '[:upper:]' '[:lower:]')"; then
+        "$code_cli" --install-extension "$extension" --do-not-include-pack-dependencies
+    fi
+done
+set -- --vscode
+if [ "$backup" = true ]; then set -- "$@" --backup; fi
+"$repo_dir/tools/install-dotfiles" "$@"
+printf 'VS Code setup finished. Reload any existing windows to load extensions.\n'
+printf 'Keep Settings Sync off. On a new machine, run "Settings Sync: Turn Off" in Code if sync was enabled.\n'

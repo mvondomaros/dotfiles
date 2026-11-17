@@ -1,0 +1,44 @@
+# Appearance
+teabyii.ayu
+
+# Shared project indentation, matching Neovim's built-in EditorConfig support
+editorconfig.editorconfig
+
+# Python: explicitly list helpers; do not install the Python pack's Pylance
+ms-python.python
+ms-python.debugpy
+ms-python.vscode-python-envs
+renan-r-santos.pixi-code
+astral-sh.ty
+charliermarsh.ruff
+
+# Jupyter notebooks: kernels, renderers, shortcuts, cell tags, and slides
+ms-toolsai.jupyter
+ms-toolsai.jupyter-renderers
+ms-toolsai.jupyter-keymap
+ms-toolsai.vscode-jupyter-cell-tags
+ms-toolsai.vscode-jupyter-slideshow
+
+# Shell and Lua: use the same formatters as Neovim
+mkhl.shfmt
+timonwong.shellcheck
+bmalehorn.vscode-fish
+JohnnyMorganz.stylua
+
+# Scientific writing and data
+myriad-dreamin.tinymist
+james-yu.latex-workshop
+mechatroner.rainbow-csv
+
+# Remote development: SSH, containers, and tunnels; no Windows-only WSL
+ms-vscode-remote.vscode-remote-extensionpack
+ms-vscode-remote.remote-ssh
+ms-vscode-remote.remote-ssh-edit
+ms-vscode.remote-explorer
+ms-vscode-remote.remote-containers
+ms-vscode.remote-server
+
+# Coding assistants and their companion extension
+openai.chatgpt
+openai.codex-audio
+anthropic.claude-code

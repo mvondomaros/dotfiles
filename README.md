@@ -2,8 +2,9 @@
 
 Shared configuration for macOS workstations and Linux/HPC accounts. macOS uses
 Homebrew, Kitty, and Fish; Linux uses Bash and existing site tools wherever
-possible. Starship is the prompt. Neovim is preferred, with a standalone Vim
-fallback. Shell startup never installs packages or downloads editor plugins.
+possible. Starship is the prompt. VS Code is the preferred GUI editor; Neovim is
+the terminal editor, with a standalone Vim fallback. Shell startup never installs
+packages or downloads editor plugins.
 
 ## Install configuration
 
@@ -262,6 +263,75 @@ downloads and removes them afterward.
 
 ## Editors and shell integrations
 
+VS Code is the preferred GUI editor; Neovim is the terminal editor. Both use
+Ayu Light and the same Python/Typst toolchain. Kitty and VS Code use Fira Code,
+and the VS Code terminal shares Kitty's ANSI palette. Terminal `$EDITOR`,
+`$VISUAL`, and `v` continue to select Neovim with Vim/vi fallbacks.
+
+### VS Code
+
+`vscode/settings.json`, `vscode/keybindings.json`, and `vscode/extensions.txt`
+are the source of truth. The installer links the two JSON files into VS Code's
+native user directory on workstations: `~/Library/Application Support/Code/User`
+on macOS, or `$XDG_CONFIG_HOME/Code/User` on Linux. Other user data stays in its
+native location. Settings changed through VS Code's UI edit the tracked file;
+review and commit those changes like any other dotfile.
+
+VS Code is included in `brew/workstation.Brewfile`; install that cask explicitly
+if needed (`brew install --cask visual-studio-code`). Linux desktop installation
+uses the system package manager. Provision the shared tools, then apply VS Code:
+
+```sh
+~/.config/tools/install-tools
+~/.config/tools/install-tools --editor
+~/.config/tools/setup-vscode --check
+~/.config/tools/setup-vscode --backup
+```
+
+`--check` is offline and exits nonzero for missing tools, extensions, or config
+links, and for installed extensions missing from the manifest. Setup installs
+missing declared extensions, backs up conflicting settings only with `--backup`,
+and leaves Settings Sync under VS Code's control. On a new machine where Sync is
+enabled, run **Settings Sync: Turn Off** once in VS Code, leaving the option to
+clear cloud data unchecked. The CLI's `--sync off` flag is only a session override;
+it does not change the saved preference. Backups use the installer's normal state
+directory. Extension auto-updates are disabled; update the declared
+set explicitly with `tools/setup-vscode --update` or
+`tools/update-dotfiles --vscode`. Setup installs each listed extension with
+`--do-not-include-pack-dependencies`: companion extensions are explicitly listed,
+so changing an upstream extension pack does not silently expand the setup or
+reinstall Pylance. Additional installed extensions are preserved and reported by
+`--check`. Add desired extensions to the manifest before sharing the setup.
+Server roles skip VS Code setup and configuration entirely.
+
+Python uses ty for language services and Ruff for linting, formatting, and save
+actions. The Microsoft Python extensions provide interpreter selection/debugging,
+and Pixi Code discovers existing Pixi environments; select a named environment
+per project when needed. Pylance is not used (`python.languageServer = None`).
+The ty client disables uv integration. Ruff, ty, Tinymist, shfmt, ShellCheck, and
+StyLua resolve the shared executables from PATH rather than provisioning their
+own tool versions. The macOS integrated terminal uses Fish, matching Kitty.
+
+Jupyter and its notebook renderers, keymap, cell-tag, and slideshow helpers are
+all declared. Remote development includes the Remote Development pack, SSH,
+SSH configuration editing, Remote Explorer, Dev Containers, and Remote Tunnels.
+Their companion extensions are explicit too; Windows-only WSL is omitted.
+
+EditorConfig supplies project indentation consistently with Neovim. Saves are
+explicit, with code formatted on save; Markdown/plain text preserve
+authored line breaks. Existing LaTeX Workshop, Jupyter, CSV, remote editing, and
+coding assistant integrations are declared too. TeX/latexindent and notebook
+kernels remain project or workstation dependencies. Project formatting rules
+belong in `pyproject.toml`, `.editorconfig`, or project `.vscode/` settings.
+Personal machine-specific exceptions can use local workspace or remote settings;
+there is no generated user-settings merge layer.
+
+For configuration links alone, use `tools/install-dotfiles --vscode --backup`.
+This changes neither extensions nor Settings Sync. The normal installer also
+links VS Code settings on workstations, using its usual preserve/backup policy.
+
+### Terminal editors
+
 Use `v` or `$EDITOR` for Neovim → Vim → vi selection. The full shared setup
 requires Neovim 0.12+. Older versions and `DOTFILES_NVIM_MODE=basic` use the
 standalone Vim configuration. Missing plugins leave a native editing setup;
@@ -510,8 +580,9 @@ that machine:
 ~/.config/tools/update-dotfiles
 ```
 
-`--all` selects CLI core, editor, and agents together; `--backup` remains a
-separate choice for replacing conflicting configuration entries with backups.
+`--all` selects CLI core, editor, agents, and workstation VS Code extensions
+together; `--backup` remains a separate choice for replacing conflicting
+configuration entries with backups.
 The selected role determines whether Python and Typst belong to those profiles.
 The default updates Git and reapplies configuration links. Profiles are explicit
 on each invocation; include `--editor` whenever refreshing a provisioned full

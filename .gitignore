@@ -26,6 +26,7 @@
 !/tools/
 !/vim-colors/
 !/vimrc
+!/vscode/
 !/vmdrc
 
 # Machine-local state and credentials within managed directories.

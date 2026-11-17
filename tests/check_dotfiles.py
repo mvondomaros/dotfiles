@@ -31,7 +31,7 @@ class DotfilesTests(unittest.TestCase):
         self.home.mkdir()
         self.repo = self.root / 'checkout'
         self.repo.mkdir()
-        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'btop', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'brew', 'vim-colors']:
+        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'btop', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'brew', 'vim-colors', 'vscode']:
             shutil.copytree(REPO / name, self.repo / name, ignore=shutil.ignore_patterns('local', '__pycache__'))
         for name in ['starship.toml', 'vimrc', '.gitignore']:
             shutil.copy2(REPO / name, self.repo / name)
@@ -62,7 +62,7 @@ class DotfilesTests(unittest.TestCase):
     def updater_helpers(self, real_installer=False):
         self.update_log = self.root / 'update.log'
         self.env['DOTFILES_UPDATE_LOG'] = str(self.update_log)
-        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor']:
+        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor', 'setup-vscode']:
             if name == 'install-dotfiles' and real_installer:
                 continue
             helper = self.repo / 'tools' / name
@@ -125,7 +125,7 @@ class DotfilesTests(unittest.TestCase):
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), released)
         self.assertEqual(self.update_log.read_text().splitlines(), [
             'new-updater', 'update-tools ', 'update-tools --editor', 'update-tools --agents',
-            'setup-shell ', 'setup-editor --parsers --spell'])
+            'setup-shell ', 'setup-editor --parsers --spell', 'setup-vscode --update --backup'])
         self.assertFalse(git_dir.is_symlink())
         self.assertTrue((git_dir / 'config').is_symlink())
         self.assertEqual(self.run_command([GIT, 'config', '--file', str(git_dir / 'config'),
@@ -219,7 +219,8 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.update_dotfiles('--no-pull', '--all', '--backup')
         self.assertEqual(self.update_log.read_text().splitlines(), [
             'update-tools ', 'update-tools --editor', 'update-tools --agents',
-            'install-dotfiles --backup', 'setup-shell ', 'setup-editor --parsers --spell'])
+            'install-dotfiles --backup', 'setup-shell ', 'setup-editor --parsers --spell',
+            'setup-vscode --update --backup'])
         self.update_log.unlink()
         helper = self.repo / 'tools/update-tools'
         helper.write_text(helper.read_text() + 'test "$*" != --editor || exit 9\n')
@@ -284,6 +285,96 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         backups = list((self.home / '.local/state/dotfiles/backups').glob('*/.bashrc'))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_text(), '# site settings\n')
+
+    def test_vscode_links_only_authored_files_with_backups_and_native_paths(self):
+        self.mock('uname', 'echo Darwin')
+        user = self.home / 'Library/Application Support/Code/User'
+        user.mkdir(parents=True)
+        (user / 'settings.json').write_text('{"old": true}\n')
+        (user / 'keybindings.json').write_text('[{"key": "old"}]\n')
+        (user / 'workspaceStorage').mkdir()
+        state = user / 'workspaceStorage/state'
+        state.write_text('private runtime state')
+        command = [str(self.repo / 'tools/install-dotfiles'), '--vscode']
+        self.run_command(command, code=1)
+        self.assertEqual((user / 'settings.json').read_text(), '{"old": true}\n')
+        self.run_command(command + ['--backup'])
+        for name in ['settings.json', 'keybindings.json']:
+            self.assertTrue((user / name).is_symlink())
+            self.assertEqual((user / name).resolve(), self.repo / 'vscode' / name)
+        self.assertFalse(user.is_symlink())
+        self.assertEqual(state.read_text(), 'private runtime state')
+        self.assertFalse((self.home / '.bashrc').exists())
+        backups_root = self.home / '.local/state/dotfiles/backups'
+        backups = list(backups_root.glob('*/Library/Application Support/Code/User/settings.json'))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_text(), '{"old": true}\n')
+        self.run_command(command)
+        self.assertEqual(len(list(backups_root.glob('*/Library/Application Support/Code/User/settings.json'))), 1)
+        self.mock('uname', 'echo Linux')
+        config = self.root / 'custom config'
+        self.run_command(command, extra={'XDG_CONFIG_HOME': str(config)})
+        self.assertTrue((config / 'Code/User/settings.json').is_symlink())
+
+    def test_vscode_setup_checks_installs_updates_and_preserves_extra_extensions(self):
+        manifest = self.repo / 'vscode/extensions.txt'
+        extensions = [line for line in manifest.read_text().splitlines() if line and not line.startswith('#')]
+        log = self.root / 'code.log'
+        listing = self.root / 'extensions.txt'
+        listing.write_text('TEABYII.AYU\nother.existing-extension\n')
+        self.env.update(CODE_LOG=str(log), CODE_EXTENSIONS=str(listing))
+        self.mock('code', '''printf '%s\\n' "$*" >> "$CODE_LOG"
+case "$1" in
+    --list-extensions) cat "$CODE_EXTENSIONS" ;;
+    --install-extension)
+        printf '%s\\n' "$2" >> "$CODE_EXTENSIONS"
+        if [ "$2" = ms-python.python ]; then
+            case " $* " in
+                *' --do-not-include-pack-dependencies '*) ;;
+                *) printf '%s\\n' ms-python.vscode-pylance >> "$CODE_EXTENSIONS" ;;
+            esac
+        fi ;;
+esac''')
+        for tool in ['pixi', 'ruff', 'ty', 'tinymist', 'shfmt', 'shellcheck', 'stylua']:
+            self.mock(tool, 'exit 0')
+        setup = [str(self.repo / 'tools/setup-vscode')]
+        self.run_command(setup + ['--check'], code=1)
+        self.assertEqual(log.read_text().splitlines(), ['--list-extensions'])
+        self.assertFalse((self.home / '.config/Code').exists())
+        log.write_text('')
+        self.run_command(setup)
+        calls = log.read_text().splitlines()
+        self.assertEqual(calls, ['--list-extensions'] + [
+            '--install-extension ' + extension + ' --do-not-include-pack-dependencies'
+            for extension in extensions if extension != 'teabyii.ayu'
+        ])
+        self.assertIn('other.existing-extension', listing.read_text())
+        self.assertNotIn('ms-python.vscode-pylance', listing.read_text())
+        self.assertTrue((self.home / '.config/Code/User/settings.json').is_symlink())
+        log.write_text('')
+        result = self.run_command(setup + ['--check'], code=1)
+        self.assertIn('undeclared extension: other.existing-extension', result.stderr)
+        self.assertEqual(log.read_text().splitlines(), ['--list-extensions'])
+        listing.write_text(listing.read_text().replace('other.existing-extension\n', ''))
+        self.run_command(setup + ['--check'])
+        log.write_text('')
+        self.run_command(setup + ['--update'])
+        self.assertEqual(log.read_text().splitlines(), ['--list-extensions'] + [
+            '--install-extension ' + extension + ' --do-not-include-pack-dependencies --force'
+            for extension in extensions
+        ])
+        self.assertNotIn('ms-python.vscode-pylance', listing.read_text())
+        self.mock('code', 'exit 7')
+        self.run_command(setup, code=7)
+
+    def test_server_role_skips_vscode_configuration_and_updates(self):
+        self.install('--role', 'server')
+        self.assertFalse((self.home / '.config/Code').exists())
+        self.run_command([str(self.repo / 'tools/setup-vscode')])
+        self.assertFalse((self.home / '.config/Code').exists())
+        self.updater_helpers()
+        self.update_dotfiles('--no-pull', '--all')
+        self.assertNotIn('setup-vscode', self.update_log.read_text())
 
     @unittest.skipUnless(GIT, 'Git unavailable')
     def test_private_git_include_with_external_checkout(self):

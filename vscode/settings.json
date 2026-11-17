@@ -1,0 +1,134 @@
+{
+    "workbench.colorTheme": "Ayu Light",
+    "editor.fontFamily": "'Fira Code', monospace",
+    "editor.fontSize": 14,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.renderWhitespace": "trailing",
+    "editor.scrollBeyondLastLine": false,
+    "editor.formatOnSave": true,
+    "files.autoSave": "off",
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    "files.insertFinalNewline": true,
+    "files.watcherExclude": {
+        "**/.pixi/**": true,
+        "**/.venv/**": true
+    },
+    "search.exclude": {
+        "**/.pixi": true,
+        "**/.venv": true
+    },
+    "extensions.autoUpdate": "off",
+    "extensions.autoCheckUpdates": false,
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    "explorer.confirmDelete": false,
+    "chat.viewSessions.orientation": "stacked",
+    "terminal.external.linuxExec": "kitty",
+    "terminal.external.osxExec": "kitty",
+    "terminal.integrated.fontFamily": "Fira Code",
+    "terminal.integrated.fontSize": 14,
+    "terminal.integrated.defaultProfile.osx": "fish",
+    "terminal.integrated.profiles.osx": {
+        "fish": {
+            "path": "fish"
+        }
+    },
+    "workbench.colorCustomizations": {
+        "[Ayu Light]": {
+            "editor.background": "#F8F9FA",
+            "editor.foreground": "#5C6166",
+            "editorCursor.foreground": "#FFAA33",
+            "editor.selectionBackground": "#D3E1F5",
+            "terminal.background": "#F8F9FA",
+            "terminal.foreground": "#5C6166",
+            "terminalCursor.foreground": "#FFAA33",
+            "terminal.selectionBackground": "#D3E1F5",
+            "terminal.ansiBlack": "#5C6166",
+            "terminal.ansiRed": "#E65050",
+            "terminal.ansiGreen": "#86B300",
+            "terminal.ansiYellow": "#F2AE49",
+            "terminal.ansiBlue": "#399EE6",
+            "terminal.ansiMagenta": "#A37ACC",
+            "terminal.ansiCyan": "#4CBF99",
+            "terminal.ansiWhite": "#8A9199",
+            "terminal.ansiBrightBlack": "#8A9199",
+            "terminal.ansiBrightRed": "#F07171",
+            "terminal.ansiBrightGreen": "#6CBF43",
+            "terminal.ansiBrightYellow": "#FA8D3E",
+            "terminal.ansiBrightBlue": "#55B4D4",
+            "terminal.ansiBrightMagenta": "#C788CE",
+            "terminal.ansiBrightCyan": "#55B4D4",
+            "terminal.ansiBrightWhite": "#5C6166"
+        }
+    },
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
+    "python.languageServer": "None",
+    "ruff.path": ["ruff"],
+    "ty.path": ["ty"],
+    "ty.experimental.useUv": "off",
+    "[shellscript]": {
+        "editor.defaultFormatter": "mkhl.shfmt",
+        "editor.insertSpaces": true
+    },
+    "shfmt.executablePath": "shfmt",
+    "shellcheck.executablePath": "shellcheck",
+    "[fish]": {
+        "editor.defaultFormatter": "bmalehorn.vscode-fish"
+    },
+    "[lua]": {
+        "editor.defaultFormatter": "JohnnyMorganz.stylua"
+    },
+    "stylua.styluaPath": "stylua",
+    "stylua.disableVersionCheck": true,
+    "[markdown]": {
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 88,
+        "editor.tabSize": 2,
+        "editor.formatOnSave": false,
+        "files.trimTrailingWhitespace": false
+    },
+    "[plaintext]": {
+        "editor.formatOnSave": false
+    },
+    "[latex]": {
+        "editor.defaultFormatter": "james-yu.latex-workshop",
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 100,
+        "editor.tabSize": 2
+    },
+    "latex-workshop.formatting.latex": "latexindent",
+    "latex-workshop.formatting.latexindent.args": [
+        "-m",
+        "-l=%DIR%/latexindent.yaml",
+        "-c",
+        "%DIR%/",
+        "%TMPFILE%",
+        "-y=defaultIndent: '%INDENT%'"
+    ],
+    "latex-workshop.latex.autoBuild.run": "onSave",
+    "latex-workshop.latex.outDir": "%DIR%/out",
+    "latex-workshop.view.pdf.viewer": "tab",
+    "latex-workshop.view.pdf.tab.editorGroup": "right",
+    "[typst]": {
+        "editor.defaultFormatter": "myriad-dreamin.tinymist",
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 100,
+        "editor.tabSize": 2
+    },
+    "tinymist.serverPath": "tinymist",
+    "tinymist.formatterMode": "typstyle",
+    "tinymist.formatterPrintWidth": 100,
+    "tinymist.formatterIndentSize": 2,
+    "tinymist.exportPdf": "never",
+    "tinymist.lint.enabled": true,
+    "tinymist.lint.when": "onSave",
+    "tinymist.preview.refresh": "onSave"
+}

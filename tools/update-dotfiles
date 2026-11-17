@@ -7,27 +7,30 @@ pull=true
 tools=false
 editor=false
 agents=false
+vscode=false
 backup=false
 for option in "$@"; do
     case $option in
         --check) check=true ;;
         --no-pull) pull=false ;;
-        --all) tools=true; editor=true; agents=true ;;
+        --all) tools=true; editor=true; agents=true; vscode=true ;;
         --tools) tools=true ;;
         --editor) editor=true ;;
         --agents) agents=true ;;
+        --vscode) vscode=true ;;
         --backup) backup=true ;;
         --help)
             cat <<'HELP'
-Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents] [--backup]
+Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents --vscode] [--backup]
 
 Default: fast-forward the current branch from its upstream and reapply config links.
   --check    Fetch and show incoming commits and selected steps, without applying them.
   --no-pull  Apply the current checkout; also works with uncommitted local changes.
-  --all      Select --tools, --editor, and --agents together.
+  --all      Select --tools, --editor, --agents, and --vscode together.
   --tools    Update CLI core tools and regenerate cached shell completions.
   --editor   Update Neovim/editor tools and restore pinned plugins, parsers, spelling.
   --agents   Update Codex CLI and Claude Code.
+  --vscode   Update declared VS Code extensions and reapply settings (workstations).
   --backup   Preserve and replace conflicting configuration files or old links.
 
 Use --editor for machines with the full Neovim setup. Profiles are explicit per run.
@@ -87,6 +90,7 @@ if [ "$pull" = true ]; then
         [ "$tools" = false ] || set -- "$@" --tools
         [ "$editor" = false ] || set -- "$@" --editor
         [ "$agents" = false ] || set -- "$@" --agents
+        [ "$vscode" = false ] || set -- "$@" --vscode
         [ "$backup" = false ] || set -- "$@" --backup
         exec "$repo_dir/tools/update-dotfiles" "$@"
     fi
@@ -95,6 +99,9 @@ printf 'Plan: reapply configuration links%s.\n' "$([ "$backup" = false ] || prin
 [ "$tools" = false ] || printf 'Plan: update CLI core and regenerate shell completions.\n'
 [ "$editor" = false ] || printf 'Plan: update editor tools and restore pinned plugins, parsers, spelling.\n'
 [ "$agents" = false ] || printf 'Plan: update Codex CLI and Claude Code.\n'
+if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
+    printf 'Plan: update declared VS Code extensions and reapply settings.\n'
+fi
 if [ "$check" = true ]; then
     printf 'Check complete; no configuration, package, or plugin changes applied.\n'
     exit 0
@@ -117,4 +124,9 @@ else
 fi
 if [ "$tools" = true ]; then "$repo_dir/tools/setup-shell"; fi
 if [ "$editor" = true ]; then "$repo_dir/tools/setup-editor" --parsers --spell; fi
+if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
+    set -- --update
+    [ "$backup" = false ] || set -- "$@" --backup
+    "$repo_dir/tools/setup-vscode" "$@"
+fi
 printf 'Requested update steps finished. Restart shells and editors to load the changes.\n'

@@ -1,23 +1,31 @@
 #!/bin/sh
 # Configuration only. No network access, packages, or shell changes.
 set -eu
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 config_home=${XDG_CONFIG_HOME:-$HOME/.config}
 backup=false
 host=
 role=
+vscode_only=false
 while [ "$#" -gt 0 ]; do
     case $1 in
         --host) [ "$#" -ge 2 ] || exit 2; host=$2; shift ;;
         --role) [ "$#" -ge 2 ] || exit 2; role=$2; shift ;;
         --backup) backup=true ;;
-        --help) printf 'Usage: %s [--host NAME] [--role workstation|server] [--backup]\n' "$0"; exit 0 ;;
+        --vscode) vscode_only=true ;;
+        --help) printf 'Usage: %s [--host NAME] [--role workstation|server] [--backup] [--vscode]\n\n--vscode links only VS Code configuration (workstations only).\n' "$0"; exit 0 ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
 done
 case $host in *[!a-zA-Z0-9_-]*) printf 'Invalid host name\n' >&2; exit 2 ;; esac
 case $role in ''|workstation|server) ;; *) printf 'Invalid role: %s\n' "$role" >&2; exit 2 ;; esac
+if [ "$vscode_only" = true ] && { [ -n "$host" ] || [ -n "$role" ]; }; then
+    printf '%s\n' '--vscode cannot be combined with --host or --role.' >&2
+    exit 2
+fi
+# shellcheck source=tools/role.sh
+. "$repo_dir/tools/role.sh"
 backup_dir=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups/$(date +%Y%m%d-%H%M%S)-$$
 backup_file() {
     relative=${1#"$HOME"/}
@@ -35,6 +43,7 @@ link_file() {
     if [ -e "$dst" ] || [ -L "$dst" ]; then
         if [ "$backup" = false ]; then
             printf 'skip: %s exists (use --backup to preserve and replace it)\n' "$dst" >&2
+            if [ "$vscode_only" = true ]; then return 1; fi
             return
         fi
         backup_file "$dst"
@@ -56,6 +65,23 @@ link_git_config() {
     mkdir -p "$git_dir"
     link_file "$repo_dir/git/config" "$git_dir/config"
 }
+link_vscode_config() {
+    [ "$(dotfiles_read_role)" = workstation ] || return 0
+    case $(uname -s) in
+        Darwin) code_user="$HOME/Library/Application Support/Code/User" ;;
+        Linux) code_user="$config_home/Code/User" ;;
+        *) return 0 ;;
+    esac
+    # Only authored configuration is linked; Code/User remains a real directory.
+    for entry in settings.json keybindings.json; do
+        link_file "$repo_dir/vscode/$entry" "$code_user/$entry"
+    done
+}
+if [ "$vscode_only" = true ]; then
+    dotfiles_read_role >/dev/null
+    link_vscode_config
+    exit 0
+fi
 mkdir -p "$config_home" "$config_home/dotfiles/local"
 for entry in bash atuin btop eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
     link_file "$repo_dir/$entry" "$config_home/$entry"
@@ -84,5 +110,7 @@ if [ -n "$role" ]; then
     trap - EXIT HUP INT TERM
     printf 'role: %s\n' "$role"
 fi
+dotfiles_read_role >/dev/null
+link_vscode_config
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/vim/undo"
 printf '\nConfiguration installed. Packages and login shells were not changed.\n'

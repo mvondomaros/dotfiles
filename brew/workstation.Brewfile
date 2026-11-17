@@ -30,6 +30,7 @@ cask "rectangle"
 cask "tailscale-app"
 cask "texifier"
 cask "vlc"
+cask "visual-studio-code"
 cask "zotero"
 mas "Agenda", id: 1287445660
 mas "AusweisApp", id: 948660805
