@@ -8,8 +8,7 @@ packages or downloads editor plugins.
 
 ## Install configuration
 
-The normal checkout is `~/.config`. Clone **without** `--recurse-submodules`;
-neither the shell nor the Vim fallback needs a submodule.
+The normal checkout is `~/.config`. The repository has no submodules.
 
 ```sh
 git clone https://github.com/mvondomaros/dotfiles.git ~/.config
@@ -490,6 +489,10 @@ Neovim theme uses the same RGB values, with approximations in 256-color terminal
 btop selects the tracked `btop/themes/ayu-light.theme` through `btop/btop.conf`.
 Restart btop after updating its theme.
 
+PyCharm uses the Light theme of the Ayu Themes plugin from the JetBrains
+Marketplace, which follows the same upstream palette. IDE settings are not
+tracked; only `ideavim/ideavimrc` is.
+
 Fish applies the tracked theme to session globals on every interactive startup,
 so stale universal colors cannot freeze an old theme. Private interactive hooks
 still run afterward. `FZF_DEFAULT_OPTS_FILE` points to `fzf/config`; explicit
@@ -649,7 +652,6 @@ so offline archives can be verified without trusting a moving `latest` download.
 | Linux Tree-sitter CLI package | Pins a conda-forge build compatible with glibc 2.17+. Pixi resolves its C runtime in a private environment; the upstream Linux binaries currently require glibc 2.39. |
 | Vendored `bash-preexec` 0.7.0 | Keeps history hooks offline and supports Bash 3.2 through 5.3. Review the diff against the [exact upstream revision](https://github.com/rcaloras/bash-preexec/blob/d866eeefdb8dfce075cbd4e37dc73c4deb4b0bd2/bash-preexec.sh) when updating. |
 | German spelling checksum | Validates the downloaded dictionary. Its upstream URL is mutable, so an upstream change must fail verification until the new contents/checksum are reviewed. |
-| JetBrains submodule commit | `lazy-idea` supplies the optional JetBrains mappings. Keep its revision fixed for reproducible setup; initialize or update it only when using that integration. |
 | CI action commits | Keep full commit SHAs for the action code executed by CI; the release comments identify which upstream tags to review for updates. |
 
 The plugin lockfile is sufficient to choose versions; there is no additional
@@ -660,6 +662,6 @@ Neovim 0.12+; older editor versions use the basic fallback.
 The root `.gitignore` is an allowlist because this checkout can also be the live
 XDG directory. Unmanaged application data, private overrides, and generated
 completions stay out of Git. `nvim/lazy-lock.json` pins the plugin setup.
-The `lazy-idea` submodule is optional and is never cloned by the installer.
-JetBrains integration requires explicitly initializing it; it is unnecessary
-on clusters.
+JetBrains IDEs use `ideavim/ideavimrc`, which mirrors the Neovim options and
+leader mappings with IDE actions; no submodule or IdeaVim plugin download is
+needed.

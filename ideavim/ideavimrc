@@ -1,42 +1,109 @@
-" LazyVim-style mappings for JetBrains IDEs.
-" Upstream hard-codes ~/.lazy-idea, so load its modules from this XDG config.
+" IdeaVim counterpart of the Neovim setup: same options, leader, and keys.
+" Prefix = subject, next letter = action; IDE actions stand in for plugins.
+let mapleader = " "
+let maplocalleader = " "
 
-source ~/.config/lazy-idea/modules/settings.vim
-source ~/.config/lazy-idea/modules/plugins.vim
-source ~/.config/lazy-idea/modules/navigation.vim
-source ~/.config/lazy-idea/modules/lsp.vim
+set clipboard+=unnamedplus
+set hlsearch incsearch ignorecase smartcase
+set inccommand=nosplit
+set number relativenumber
+set scrolloff=4 sidescrolloff=8
+set shiftround
+set nowrap
+set undolevels=10000
+set ideajoin
+" Like which-key.nvim, keep the popup open instead of timing out sequences.
+set notimeout
 
-let g:WhichKeyDesc_leader_b = "<leader>b +buffer"
-source ~/.config/lazy-idea/modules/buffer.vim
+" Native Neovim features that IdeaVim provides as bundled extensions.
+set commentary
+set highlightedyank
+set matchit
+set which-key
 
+nnoremap <Esc> :nohlsearch<CR>
+xnoremap < <gv
+xnoremap > >gv
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+nmap gd <Action>(GotoDeclaration)
+
+let g:WhichKeyDesc_leader_b = "<leader>b +buffers"
 let g:WhichKeyDesc_leader_c = "<leader>c +code"
-source ~/.config/lazy-idea/modules/code.vim
-
-let g:WhichKeyDesc_leader_d = "<leader>d +debug"
-source ~/.config/lazy-idea/modules/debug.vim
-
-let g:WhichKeyDesc_leader_f = "<leader>f +file/find"
-source ~/.config/lazy-idea/modules/file.vim
-
+let g:WhichKeyDesc_leader_f = "<leader>f +files"
 let g:WhichKeyDesc_leader_g = "<leader>g +git"
-source ~/.config/lazy-idea/modules/git.vim
-
+let g:WhichKeyDesc_leader_h = "<leader>h +help / history"
 let g:WhichKeyDesc_leader_s = "<leader>s +search"
-source ~/.config/lazy-idea/modules/search.vim
-
-let g:WhichKeyDesc_leader_t = "<leader>t +test"
-source ~/.config/lazy-idea/modules/test.vim
-
-let g:WhichKeyDesc_leader_u = "<leader>u +ui"
-source ~/.config/lazy-idea/modules/ui.vim
-
+let g:WhichKeyDesc_leader_t = "<leader>t +terminal"
+let g:WhichKeyDesc_leader_u = "<leader>u +UI"
 let g:WhichKeyDesc_leader_w = "<leader>w +windows"
-source ~/.config/lazy-idea/modules/window.vim
+let g:WhichKeyDesc_leader_q = "<leader>q +quit"
 
-let g:WhichKeyDesc_leader_x = "<leader>x +diagnostics/quickfix"
-source ~/.config/lazy-idea/modules/diagnostics.vim
+let g:WhichKeyDesc_leader_fe = "<leader>fe File: explorer"
+nmap <leader>fe <Action>(SelectInProjectView)
+let g:WhichKeyDesc_leader_ff = "<leader>ff Find project files"
+nmap <leader>ff <Action>(GotoFile)
+let g:WhichKeyDesc_leader_fn = "<leader>fn New file"
+nmap <leader>fn <Action>(NewScratchFile)
+let g:WhichKeyDesc_leader_fo = "<leader>fo File: open path"
+nnoremap <leader>fo :edit<Space>
+let g:WhichKeyDesc_leader_fr = "<leader>fr Recent project files"
+nmap <leader>fr <Action>(RecentFiles)
+let g:WhichKeyDesc_leader_fs = "<leader>fs Save file"
+nnoremap <leader>fs :write<CR>
 
-let g:WhichKeyDesc_leader_tab = "<leader><tab> +tabs"
-source ~/.config/lazy-idea/modules/tabs.vim
+let g:WhichKeyDesc_leader_bb = "<leader>bb Buffer: back"
+nnoremap <leader>bb <C-^>
+let g:WhichKeyDesc_leader_bd = "<leader>bd Close buffer"
+nmap <leader>bd <Action>(CloseContent)
+let g:WhichKeyDesc_leader_bl = "<leader>bl Buffer: list"
+nmap <leader>bl <Action>(Switcher)
+let g:WhichKeyDesc_leader_bn = "<leader>bn Buffer: next"
+nmap <leader>bn <Action>(NextTab)
+let g:WhichKeyDesc_leader_bp = "<leader>bp Buffer: previous"
+nmap <leader>bp <Action>(PreviousTab)
 
-source ~/.config/lazy-idea/modules/defaults.vim
+let g:WhichKeyDesc_leader_wc = "<leader>wc Window: close"
+nnoremap <leader>wc <C-w>c
+let g:WhichKeyDesc_leader_wh = "<leader>wh Window: horizontal split"
+nnoremap <leader>wh <C-w>s
+let g:WhichKeyDesc_leader_wv = "<leader>wv Window: vertical split"
+nnoremap <leader>wv <C-w>v
+
+let g:WhichKeyDesc_leader_cd = "<leader>cd Diagnostic details"
+nmap <leader>cd <Action>(ShowErrorDescription)
+let g:WhichKeyDesc_leader_cf = "<leader>cf Format"
+nmap <leader>cf <Action>(ReformatCode)
+xmap <leader>cf <Action>(ReformatCode)
+let g:WhichKeyDesc_leader_cs = "<leader>cs Document symbols"
+nmap <leader>cs <Action>(FileStructurePopup)
+
+let g:WhichKeyDesc_leader_gd = "<leader>gd Git diff"
+nmap <leader>gd <Action>(Compare.SameVersion)
+let g:WhichKeyDesc_leader_gl = "<leader>gl Git history"
+nmap <leader>gl <Action>(Vcs.Show.Log)
+let g:WhichKeyDesc_leader_gs = "<leader>gs Git: status"
+nmap <leader>gs <Action>(ActivateCommitToolWindow)
+
+let g:WhichKeyDesc_leader_sd = "<leader>sd Find diagnostics"
+nmap <leader>sd <Action>(ActivateProblemsViewToolWindow)
+let g:WhichKeyDesc_leader_st = "<leader>st Search project text"
+nmap <leader>st <Action>(FindInPath)
+
+let g:WhichKeyDesc_leader_hk = "<leader>hk Search keybindings"
+nnoremap <leader>hk :map<CR>
+let g:WhichKeyDesc_leader_hn = "<leader>hn History: notifications"
+nmap <leader>hn <Action>(ActivateNotificationsToolWindow)
+let g:WhichKeyDesc_leader_hs = "<leader>hs Search help"
+nmap <leader>hs <Action>(HelpTopics)
+
+let g:WhichKeyDesc_leader_tt = "<leader>tt Terminal: toggle for project"
+nmap <leader>tt <Action>(ActivateTerminalToolWindow)
+
+let g:WhichKeyDesc_leader_uw = "<leader>uw Toggle wrapping"
+nmap <leader>uw <Action>(EditorToggleUseSoftWraps)
+
+let g:WhichKeyDesc_leader_qa = "<leader>qa Quit: all windows"
+nnoremap <leader>qa :qall<CR>
