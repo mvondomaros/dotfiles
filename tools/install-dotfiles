@@ -91,7 +91,8 @@ for entry in platforms hosts; do
     link_file "$repo_dir/dotfiles/$entry" "$config_home/dotfiles/$entry"
 done
 if [ "$(uname -s)" = Darwin ]; then
-    for entry in fish kitty ideavim; do
+    # sjobs runs on workstations and reaches the cluster over SSH.
+    for entry in fish kitty ideavim sjobs; do
         link_file "$repo_dir/$entry" "$config_home/$entry"
     done
     link_file "$config_home/ideavim/ideavimrc" "$HOME/.ideavimrc"

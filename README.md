@@ -471,6 +471,10 @@ Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
 by `tools/setup-shell`, never by shell startup.
 
+On macOS, `sjobs/config.toml` selects `marc3a` as the Slurm host for `sjobs`
+(0.7 or later) and lists the cluster path prefixes it shortens. It is linked only
+on macOS; on the cluster, `sjobs` uses the local `squeue`.
+
 Use `btop` for interactive resource monitoring on macOS; the CLI Homebrew profile
 installs it. Apple's privileged `top` cannot use Kitty's user terminfo, so
 dotfiles does not wrap or alias `top`. On servers, use the available resource
