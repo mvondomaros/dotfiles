@@ -8,7 +8,9 @@ Host *
     AddKeysToAgent yes
     IgnoreUnknown UseKeychain
     UseKeychain yes
-    # Reuse one connection per destination; agent forwarding is opt-in per host.
+    # Opt-in per host in the private layer; also overrides system-wide defaults.
+    ForwardAgent no
+    # Reuse one connection per destination.
     ControlMaster auto
     ControlPath ~/.ssh/cm-%C
     ControlPersist 10m

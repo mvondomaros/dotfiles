@@ -376,7 +376,8 @@ esac''')
         self.assertEqual(private.stat().st_mode & 0o777, 0o700)
         shared = config.read_text()
         self.assertIn('Include ~/.config/dotfiles/local/ssh/*.conf', shared)
-        self.assertNotRegex(shared, r'(?m)^\s*ForwardAgent\b')
+        self.assertRegex(shared, r'(?m)^\s*ForwardAgent no$')
+        self.assertNotRegex(shared, r'(?m)^\s*ForwardAgent yes')
 
     def test_server_role_skips_vscode_configuration_and_updates(self):
         self.install('--role', 'server')

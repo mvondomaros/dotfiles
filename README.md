@@ -474,7 +474,7 @@ by `tools/setup-shell`, never by shell startup.
 On every host, the installer links `~/.ssh/config` to `ssh/config`, which holds
 only shared client defaults: keepalives, keychain use, and connection reuse
 (`ControlMaster auto`, sockets at `~/.ssh/cm-%C`, kept for 10 minutes). Agent
-forwarding is off by default. Host entries are private and are not tracked: put
+forwarding is off by default, even where a system-wide SSH config enables it. Host entries are private and are not tracked: put
 them in `~/.config/dotfiles/local/ssh/*.conf`, which the shared file includes first,
 and enable `ForwardAgent` only for hosts that need it. The include path is fixed
 at `~/.config` because SSH does not read `XDG_CONFIG_HOME`. An existing
