@@ -1,0 +1,14 @@
+# Shared SSH client defaults. Host entries stay private in
+# ~/.config/dotfiles/local/ssh/*.conf (included first, so they take precedence).
+Include ~/.config/dotfiles/local/ssh/*.conf
+
+Host *
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+    AddKeysToAgent yes
+    IgnoreUnknown UseKeychain
+    UseKeychain yes
+    # Reuse one connection per destination; agent forwarding is opt-in per host.
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%C
+    ControlPersist 10m

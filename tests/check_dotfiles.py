@@ -31,7 +31,7 @@ class DotfilesTests(unittest.TestCase):
         self.home.mkdir()
         self.repo = self.root / 'checkout'
         self.repo.mkdir()
-        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'btop', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'sjobs', 'brew', 'vim-colors', 'vscode']:
+        for name in ['bash', 'fish', 'nvim', 'tools', 'dotfiles', 'git', 'atuin', 'btop', 'eza', 'fzf', 'lazygit', 'pixi', 'kitty', 'ideavim', 'sjobs', 'ssh', 'brew', 'vim-colors', 'vscode']:
             shutil.copytree(REPO / name, self.repo / name, ignore=shutil.ignore_patterns('local', '__pycache__'))
         for name in ['starship.toml', 'vimrc', '.gitignore']:
             shutil.copy2(REPO / name, self.repo / name)
@@ -366,6 +366,19 @@ esac''')
         self.assertNotIn('ms-python.vscode-pylance', listing.read_text())
         self.mock('code', 'exit 7')
         self.run_command(setup, code=7)
+
+    def test_ssh_config_links_shared_defaults_on_workstations_only(self):
+        self.install('--role', 'server')
+        self.assertFalse((self.home / '.ssh').exists())
+        self.install('--role', 'workstation')
+        config = self.home / '.ssh/config'
+        self.assertEqual(config.resolve(), self.repo / 'ssh/config')
+        self.assertEqual((self.home / '.ssh').stat().st_mode & 0o777, 0o700)
+        private = self.home / '.config/dotfiles/local/ssh'
+        self.assertEqual(private.stat().st_mode & 0o777, 0o700)
+        shared = config.read_text()
+        self.assertIn('Include ~/.config/dotfiles/local/ssh/*.conf', shared)
+        self.assertNotRegex(shared, r'(?m)^\s*ForwardAgent\b')
 
     def test_server_role_skips_vscode_configuration_and_updates(self):
         self.install('--role', 'server')

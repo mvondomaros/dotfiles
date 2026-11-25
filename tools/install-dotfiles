@@ -77,6 +77,17 @@ link_vscode_config() {
         link_file "$repo_dir/vscode/$entry" "$code_user/$entry"
     done
 }
+link_ssh_config() {
+    [ "$(dotfiles_read_role)" = workstation ] || return 0
+    # Shared defaults only; host entries live in the private local/ssh layer.
+    if [ ! -d "$HOME/.ssh" ]; then
+        mkdir -p "$HOME/.ssh"
+        chmod 700 "$HOME/.ssh"
+    fi
+    mkdir -p "$config_home/dotfiles/local/ssh"
+    chmod 700 "$config_home/dotfiles/local/ssh"
+    link_file "$repo_dir/ssh/config" "$HOME/.ssh/config"
+}
 if [ "$vscode_only" = true ]; then
     dotfiles_read_role >/dev/null
     link_vscode_config
@@ -113,5 +124,6 @@ if [ -n "$role" ]; then
 fi
 dotfiles_read_role >/dev/null
 link_vscode_config
+link_ssh_config
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/vim/undo"
 printf '\nConfiguration installed. Packages and login shells were not changed.\n'

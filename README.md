@@ -471,6 +471,15 @@ Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
 by `tools/setup-shell`, never by shell startup.
 
+On workstations, the installer links `~/.ssh/config` to `ssh/config`, which holds
+only shared client defaults: keepalives, keychain use, and connection reuse
+(`ControlMaster auto`, sockets at `~/.ssh/cm-%C`, kept for 10 minutes). Agent
+forwarding is off by default. Host entries are private and are not tracked: put
+them in `~/.config/dotfiles/local/ssh/*.conf`, which the shared file includes first,
+and enable `ForwardAgent` only for hosts that need it. The include path is fixed
+at `~/.config` because SSH does not read `XDG_CONFIG_HOME`. An existing
+`~/.ssh/config` is kept unless `--backup` is supplied.
+
 On macOS, `sjobs/config.toml` selects `marc3a` as the Slurm host for `sjobs`
 (0.7 or later) and lists the cluster path prefixes it shortens. It is linked only
 on macOS; on the cluster, `sjobs` uses the local `squeue`.

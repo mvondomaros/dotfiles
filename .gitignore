@@ -22,6 +22,7 @@
 !/nvim/
 !/pixi/
 !/sjobs/
+!/ssh/
 !/starship.toml
 !/tools/
 !/vim-colors/
