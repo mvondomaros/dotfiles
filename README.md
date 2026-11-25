@@ -471,7 +471,7 @@ Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
 by `tools/setup-shell`, never by shell startup.
 
-On workstations, the installer links `~/.ssh/config` to `ssh/config`, which holds
+On every host, the installer links `~/.ssh/config` to `ssh/config`, which holds
 only shared client defaults: keepalives, keychain use, and connection reuse
 (`ControlMaster auto`, sockets at `~/.ssh/cm-%C`, kept for 10 minutes). Agent
 forwarding is off by default. Host entries are private and are not tracked: put

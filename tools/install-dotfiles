@@ -78,7 +78,6 @@ link_vscode_config() {
     done
 }
 link_ssh_config() {
-    [ "$(dotfiles_read_role)" = workstation ] || return 0
     # Shared defaults only; host entries live in the private local/ssh layer.
     if [ ! -d "$HOME/.ssh" ]; then
         mkdir -p "$HOME/.ssh"

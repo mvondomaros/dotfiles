@@ -367,10 +367,8 @@ esac''')
         self.mock('code', 'exit 7')
         self.run_command(setup, code=7)
 
-    def test_ssh_config_links_shared_defaults_on_workstations_only(self):
+    def test_ssh_config_links_shared_defaults_for_every_role(self):
         self.install('--role', 'server')
-        self.assertFalse((self.home / '.ssh').exists())
-        self.install('--role', 'workstation')
         config = self.home / '.ssh/config'
         self.assertEqual(config.resolve(), self.repo / 'ssh/config')
         self.assertEqual((self.home / '.ssh').stat().st_mode & 0o777, 0o700)
