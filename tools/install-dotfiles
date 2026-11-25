@@ -94,7 +94,7 @@ if [ "$vscode_only" = true ]; then
     exit 0
 fi
 mkdir -p "$config_home" "$config_home/dotfiles/local"
-for entry in bash atuin btop eza fzf lazygit nvim pixi starship.toml vimrc vim-colors; do
+for entry in bash atuin btop eza fzf lazygit nvim pixi sjobs starship.toml vimrc vim-colors; do
     link_file "$repo_dir/$entry" "$config_home/$entry"
 done
 link_git_config
@@ -102,8 +102,7 @@ for entry in platforms hosts; do
     link_file "$repo_dir/dotfiles/$entry" "$config_home/dotfiles/$entry"
 done
 if [ "$(uname -s)" = Darwin ]; then
-    # sjobs runs on workstations and reaches the cluster over SSH.
-    for entry in fish kitty ideavim sjobs; do
+    for entry in fish kitty ideavim; do
         link_file "$repo_dir/$entry" "$config_home/$entry"
     done
     link_file "$config_home/ideavim/ideavimrc" "$HOME/.ideavimrc"

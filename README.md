@@ -480,9 +480,10 @@ and enable `ForwardAgent` only for hosts that need it. The include path is fixed
 at `~/.config` because SSH does not read `XDG_CONFIG_HOME`. An existing
 `~/.ssh/config` is kept unless `--backup` is supplied.
 
-On macOS, `sjobs/config.toml` selects `marc3a` as the Slurm host for `sjobs`
-(0.7 or later) and lists the cluster path prefixes it shortens. It is linked only
-on macOS; on the cluster, `sjobs` uses the local `squeue`.
+`sjobs/config.toml` lists the cluster path prefixes that `sjobs` (0.7 or later)
+shortens. The Slurm host is not in that file, because the cluster reads the same
+checkout: the macOS environment hooks set `SJOBS_HOST=marc3a` unless it is
+already set, and on the cluster `sjobs` uses the local `squeue`.
 
 Use `btop` for interactive resource monitoring on macOS; the CLI Homebrew profile
 installs it. Apple's privileged `top` cannot use Kitty's user terminfo, so

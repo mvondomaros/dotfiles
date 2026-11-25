@@ -18,4 +18,7 @@ for _brew_prefix in /opt/homebrew /usr/local; do
     fi
 done
 export PATH
+# Workstations query Slurm on the cluster over SSH; clusters use local squeue.
+: "${SJOBS_HOST:=marc3a}"
+export SJOBS_HOST
 unset _brew_prefix _brew_path _brew_remaining _brew_entry _brew_more

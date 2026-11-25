@@ -1,2 +1,1 @@
-host = "marc3a"
 path_prefixes = ["/scratch_shared/", "/masc_shared/", "/mnt/nfs/home/", "/mnt/nfs/home2/"]

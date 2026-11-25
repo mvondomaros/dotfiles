@@ -691,6 +691,17 @@ exit 8''')
         result = self.bash('PATH="/usr/bin:/bin:' + prefix + '/bin"; source "' + str(hook) + '"; first=$PATH; source "' + str(hook) + '"; test "$PATH" = "$first"; printf "%s" "$PATH"')
         self.assertEqual(result.stdout, prefix + '/bin:/usr/bin:/bin')
 
+    def test_sjobs_host_is_set_only_by_macos_hooks(self):
+        self.assertNotIn('host', (self.repo / 'sjobs/config.toml').read_text())
+        hook = str(self.repo / 'dotfiles/platforms/macos/env.sh')
+        result = self.bash('unset SJOBS_HOST; . "' + hook + '"; printf "%s" "$SJOBS_HOST"')
+        self.assertEqual(result.stdout, 'marc3a')
+        result = self.bash('SJOBS_HOST=hnode05; . "' + hook + '"; printf "%s" "$SJOBS_HOST"')
+        self.assertEqual(result.stdout, 'hnode05')
+        linux = str(self.repo / 'dotfiles/platforms/linux/env.sh')
+        result = self.bash('unset SJOBS_HOST; . "' + linux + '"; printf "%s" "${SJOBS_HOST-unset}"')
+        self.assertEqual(result.stdout, 'unset')
+
     def test_private_interactive_overrides_shared_alias(self):
         self.install()
         local = self.home / '.config/dotfiles/local/bash.sh'
