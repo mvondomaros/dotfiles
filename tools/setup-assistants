@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Explicit workstation-only theme setup; preserve other native agent settings.
+"""Explicit workstation-only agent setup: themes, and the lab's marc3a skill for Claude Code.
+
+Other native agent settings are preserved.
 
 Requires Python 3.11+ for TOML validation. Does not install or authenticate agents.
 """
@@ -10,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import tempfile
 import tomllib
 
@@ -53,6 +56,16 @@ def codex_config(text):
     return result
 
 
+def marc3a_skill():
+    """Link the lab's cluster skill into Claude Code from a checkout of mvondomaros-lab/marc3a."""
+    candidates = [os.environ.get('MARC3A_HOME'), Path.home()/'marc3a', Path.home()/'Projects/marc3a']
+    installer = next((Path(c)/'install-skill' for c in candidates if c and (Path(c)/'install-skill').is_file()), None)
+    if installer is None:
+        print('skip: marc3a skill (no checkout in $MARC3A_HOME, ~/marc3a or ~/Projects/marc3a)')
+        return
+    subprocess.run([str(installer)], check=True)
+
+
 def main():
     state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))
     backup = state/'dotfiles/backups'/('assistants-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
@@ -93,6 +106,8 @@ def main():
         print('configured: ' + label)
     if backup.exists():
         print('backup: ' + str(backup))
+    if shutil.which('claude'):
+        marc3a_skill()
     if not changes:
         print('No Codex/Claude Code executables found; install workstation dependencies first.')
 

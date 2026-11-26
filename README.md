@@ -530,7 +530,9 @@ preferences. Existing configuration files are preserved and backed up under
 `~/.local/state/dotfiles/backups/assistants-*/`; credentials, hooks, permissions,
 models, and project trust settings are not imported into this repository.
 `CLAUDE_CONFIG_DIR` is respected when set. Running the command again reuses
-unchanged files. Codex's custom theme controls syntax highlighting; Kitty supplies
+unchanged files. For Claude Code it also links the lab's `marc3a` cluster skill, by running
+`install-skill` from a checkout of `mvondomaros-lab/marc3a` in `$MARC3A_HOME`, `~/marc3a` or
+`~/Projects/marc3a`; without a checkout it prints a `skip:` line. Codex's custom theme controls syntax highlighting; Kitty supplies
 its terminal background. See the [Codex theme documentation](https://learn.chatgpt.com/docs/cli-customization)
 and [Claude Code theme documentation](https://code.claude.com/docs/en/terminal-config#match-the-color-theme).
 
