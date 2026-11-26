@@ -1,3 +1,13 @@
 #!/bin/sh
-# Updates only this repository's tool set; never user Pixi environments.
-exec "$(dirname "$0")/install-tools" --update "$@"
+# Updates this repository's tool set. Of the user's Pixi globals, only the
+# lab's own sjobs environment is refreshed, and only when it is installed.
+repo_dir=$(dirname "$0")
+"$repo_dir/install-tools" --update "$@" || exit
+# Only the default CLI update covers sjobs; profiles and named tools do not.
+[ "$#" -eq 0 ] || exit 0
+for dir in "$HOME/.pixi/bin" /opt/homebrew/bin /usr/local/bin; do
+    case :$PATH: in *:"$dir":*) ;; *) [ ! -d "$dir" ] || PATH="$PATH:$dir" ;; esac
+done
+command -v pixi >/dev/null 2>&1 || exit 0
+pixi global list 2>/dev/null | grep -q '^sjobs ' || exit 0
+pixi global update sjobs

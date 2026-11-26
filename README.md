@@ -483,7 +483,9 @@ at `~/.config` because SSH does not read `XDG_CONFIG_HOME`. An existing
 `sjobs/config.toml` lists the cluster path prefixes that `sjobs` (0.7 or later)
 shortens. The Slurm host is not in that file, because the cluster reads the same
 checkout: the macOS environment hooks set `SJOBS_HOST=marc3a` unless it is
-already set, and on the cluster `sjobs` uses the local `squeue`.
+already set, and on the cluster `sjobs` uses the local `squeue`. `sjobs` itself is a
+Pixi global; a plain `update-tools` (no profile or tool names) also runs
+`pixi global update sjobs` when that environment is installed.
 
 Use `btop` for interactive resource monitoring on macOS; the CLI Homebrew profile
 installs it. Apple's privileged `top` cannot use Kitty's user terminfo, so
