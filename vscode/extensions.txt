@@ -38,7 +38,5 @@ ms-vscode.remote-explorer
 ms-vscode-remote.remote-containers
 ms-vscode.remote-server
 
-# Coding assistants and their companion extension
-openai.chatgpt
-openai.codex-audio
+# Coding assistant
 anthropic.claude-code
