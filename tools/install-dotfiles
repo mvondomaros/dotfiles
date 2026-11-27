@@ -123,5 +123,7 @@ fi
 dotfiles_read_role >/dev/null
 link_vscode_config
 link_ssh_config
+# The only command this checkout puts on PATH; the rest of tools/ is internal.
+link_file "$repo_dir/tools/dots" "$HOME/.local/bin/dots"
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/vim/undo"
 printf '\nConfiguration installed. Packages and login shells were not changed.\n'

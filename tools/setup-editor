@@ -14,7 +14,7 @@ done
 command -v nvim >/dev/null 2>&1 || { printf 'Neovim is unavailable; use Vim.\n' >&2; exit 1; }
 if ! nvim --headless -u NONE -i NONE '+lua if vim.fn.has("nvim-0.12") == 0 then vim.cmd("cquit 1") end' +qa; then
     printf 'Full editor setup requires Neovim 0.12+. The basic Vim-style fallback remains available.\n' >&2
-    printf 'Upgrade Neovim through its package manager/site modules, or explicitly adopt an eligible local installation with tools/update-tools --adopt nvim.\n' >&2
+    printf 'Upgrade Neovim through its package manager/site modules, or explicitly adopt an eligible local installation with dots adopt nvim.\n' >&2
     exit 1
 fi
 if nvim --headless -u NONE -i NONE -l "$repo_dir/tools/check-editor.lua" "$repo_dir/nvim/lazy-lock.json" >/dev/null 2>&1; then

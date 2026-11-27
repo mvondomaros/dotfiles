@@ -1,0 +1,349 @@
+#!/bin/sh
+# Single entry point for this checkout: dots COMMAND [TARGET...] [--modifier].
+# The other scripts in tools/ are internal steps that dots runs.
+set -u
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+tools_dir=$repo_dir/tools
+local_dir=${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/local
+targets_file=$local_dir/targets
+all_targets='tools editor agents vscode packages'
+known_targets="$all_targets appstore os"
+# Keep in sync with the tool names install-tools accepts.
+known_tools='pixi lazygit rg fd atuin btop eza nvim starship ruff ty rsync shfmt shellcheck stylua tinymist typst tree-sitter websocat codex claude bash-language-server fish-lsp'
+
+usage() {
+    cat <<HELP
+Usage: dots COMMAND [ARGUMENT...]
+
+Commands:
+  update [TARGET...]     Pull this checkout, relink configuration, update targets.
+  outdated [TARGET...]   Fetch and list incoming commits and available updates.
+  install [TARGET...]    Link configuration and install missing targets (no pull).
+  link                   Reapply configuration links only.
+  status                 Show role, host, default targets, and checkout state.
+  role [workstation|server]   Show or set this machine's role.
+  host [NAME|default]         Show or set this machine's host layer.
+  targets [TARGET...|default] Show or set the targets used when none are named.
+  adopt PROFILE|TOOL...  Linux: replace eligible user installs with verified
+                         ones (profiles: tools, editor, agents, all).
+  help                   Show this help.
+
+Targets:
+  tools     CLI core tools and cached shell completions
+  editor    Neovim tools, pinned plugins, parsers, spelling
+  agents    Codex CLI and Claude Code
+  vscode    declared VS Code extensions and settings (workstations)
+  packages  every package of the user-level package managers found
+            (Homebrew, Pixi globals, npm, uv, pipx, rustup, cargo, fisher)
+  appstore  Mac App Store apps (sudo)
+  os        operating-system updates (sudo, never restarts)
+  all       $all_targets
+  Tool names (e.g. rg nvim claude) update just those tools.
+
+Without targets, update/outdated/install use this machine's defaults
+(dots targets): "all" on workstations, "tools editor packages" on servers.
+On servers, packages touches only stacks under \$HOME; appstore and os never run.
+
+Modifiers:
+  --backup   (update, install, link) preserve and replace conflicting files
+  --no-pull  (update) apply the current checkout, even with local changes
+  --check    (adopt) preview only
+HELP
+}
+
+say() { printf '%s\n' "$*"; }
+die() { printf '%s\n' "$1" >&2; exit "${2:-1}"; }
+in_list() { case " $2 " in *" $1 "*) return 0 ;; esac; return 1; }
+
+# shellcheck source=tools/role.sh
+. "$tools_dir/role.sh"
+machine_role=
+role() {
+    [ -n "$machine_role" ] || machine_role=$(dotfiles_read_role) || exit
+    say "$machine_role"
+}
+load_role() { role >/dev/null; }
+default_targets() {
+    if [ -r "$targets_file" ]; then
+        IFS= read -r saved < "$targets_file" || :
+        [ -z "${saved:-}" ] || { say "$saved"; return; }
+    fi
+    if [ "$machine_role" = server ]; then say 'tools editor packages'; else say all; fi
+}
+
+# Parse words into the selected targets and tool names; modifiers set flags.
+backup=false
+pull=true
+check=false
+selected=
+tools_named=
+parse() {
+    allowed_modifiers=$1; shift
+    words=
+    for argument in "$@"; do
+        case $argument in
+            --backup|--no-pull|--check)
+                in_list "$argument" "$allowed_modifiers" || die "dots $command does not take $argument" 2
+                case $argument in
+                    --backup) backup=true ;; --no-pull) pull=false ;; --check) check=true ;;
+                esac ;;
+            -*) die "Unknown option: $argument (see dots help)" 2 ;;
+            *) words="$words $argument" ;;
+        esac
+    done
+}
+select_targets() {
+    load_role
+    [ -n "$words" ] || words=$(default_targets) || exit
+    for word in $words; do
+        if [ "$word" = all ]; then
+            for target in $all_targets; do in_list "$target" "$selected" || selected="$selected $target"; done
+        elif in_list "$word" "$known_targets"; then
+            in_list "$word" "$selected" || selected="$selected $word"
+        elif in_list "$word" "$known_tools"; then
+            in_list "$word" "$tools_named" || tools_named="$tools_named $word"
+        else
+            die "Unknown target or tool: $word (see dots help)" 2
+        fi
+    done
+}
+has_target() { in_list "$1" "$selected"; }
+
+# Steps keep going after a failure; the summary reports every failed step.
+done_steps=
+failed_steps=
+step() {
+    label=$1; shift
+    if "$@"; then done_steps="$done_steps $label"; else failed_steps="$failed_steps $label"; fi
+}
+summary() {
+    printf '\nDone:%s\n' "${done_steps:- nothing}"
+    if [ -n "$failed_steps" ]; then
+        rerun="dots $command"; [ "$command" != update ] || rerun="dots update --no-pull"
+        printf 'Failed:%s\nFix the reported issue and rerun %s with the same arguments.\n' \
+            "$failed_steps" "$rerun" >&2
+        exit 1
+    fi
+}
+
+for dir in "$HOME/.local/bin" "$HOME/.pixi/bin" "$HOME/.cargo/bin" /opt/homebrew/bin /usr/local/bin; do
+    case :$PATH: in *:"$dir":*) ;; *) [ ! -d "$dir" ] || PATH="$PATH:$dir" ;; esac
+done
+export PATH
+
+# Refresh Homebrew's index once per run; the steps then skip their own refresh.
+brew_refresh() {
+    [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1 || return 0
+    [ -n "$tools_named" ] || has_target tools || has_target editor || has_target agents || \
+        has_target packages || return 0
+    if brew update; then DOTFILES_BREW_UPDATED=1; export DOTFILES_BREW_UPDATED; fi
+}
+
+require_clean_checkout() {
+    changes=$(git -C "$repo_dir" status --porcelain --untracked-files=normal --ignore-submodules=none)
+    [ -z "$changes" ] || die "Checkout has local changes; commit or resolve them before updating:
+$changes"
+}
+# Fetch the upstream and list incoming commits. With "merge", fast-forward too.
+sync_checkout() {
+    mode=$1
+    command -v git >/dev/null 2>&1 || die 'Git is required to update the checkout.'
+    branch=$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD) || \
+        die 'Detached HEAD: select a branch before updating.'
+    upstream=$(git -C "$repo_dir" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || \
+        die "Configure an upstream for $branch before updating."
+    remote=$(git -C "$repo_dir" config --get "branch.$branch.remote")
+    initial_head=$(git -C "$repo_dir" rev-parse HEAD)
+    [ "$mode" = preview ] || require_clean_checkout
+    git -C "$repo_dir" fetch --no-recurse-submodules -- "$remote" || exit
+    if [ "$mode" = merge ]; then
+        require_clean_checkout
+        if [ "$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD)" != "$branch" ] || \
+            [ "$(git -C "$repo_dir" rev-parse HEAD)" != "$initial_head" ]; then
+            die 'Checkout moved during fetch; rerun dots update from the intended branch.'
+        fi
+    fi
+    # Inspect divergence before touching the checked-out files or running tools.
+    ahead=$(git -C "$repo_dir" rev-list --count "$upstream..HEAD")
+    behind=$(git -C "$repo_dir" rev-list --count "HEAD..$upstream")
+    if [ "$ahead" -ne 0 ]; then
+        message="Branch $branch has $ahead local-only commits ($behind incoming); resolve this before updating."
+        [ "$mode" = preview ] || die "$message"
+        say "$message"
+    fi
+    say "Git: $behind incoming commit(s) from $upstream."
+    [ "$behind" -eq 0 ] || git -C "$repo_dir" log --oneline "HEAD..$upstream"
+    if [ "$mode" = merge ] && [ "$behind" -ne 0 ]; then
+        git -C "$repo_dir" -c submodule.recurse=false merge --ff-only -- "$upstream" || exit
+    fi
+}
+
+backup_flag() { [ "$backup" = false ] || printf '%s\n' --backup; }
+link() {
+    # shellcheck disable=SC2046
+    "$tools_dir/install-dotfiles" $(backup_flag)
+}
+refresh_sjobs() {
+    # The lab's sjobs is a Pixi global; packages refreshes it with all the others.
+    has_target packages && return 0
+    command -v pixi >/dev/null 2>&1 || return 0
+    pixi global list 2>/dev/null | grep -q '^sjobs ' || return 0
+    pixi global update sjobs
+}
+# Arguments for update-packages from the packages/appstore/os targets.
+package_args() {
+    if has_target packages; then
+        ! has_target appstore || printf '%s\n' --mas
+        ! has_target os || printf '%s\n' --os
+    else
+        only=
+        ! has_target appstore || only=mas
+        ! has_target os || only=${only:+$only,}os
+        printf '%s\n' --only "$only"
+    fi
+}
+any_package_target() { has_target packages || has_target appstore || has_target os; }
+
+# Run the selected targets. $1 is update, install, or outdated.
+run_targets() {
+    mode=$1
+    case $mode in
+        update) tool_mode=--update ;; install) tool_mode= ;; outdated) tool_mode=--check ;;
+    esac
+    say "Role: $machine_role"
+    say "Targets:$selected$tools_named"
+    brew_refresh
+    # Word splitting of $tool_mode and $tools_named is intended below.
+    # shellcheck disable=SC2086
+    {
+        if has_target tools; then step tools "$tools_dir/install-tools" $tool_mode; fi
+        if [ "$mode" = update ] && has_target tools; then step sjobs refresh_sjobs; fi
+        if has_target editor; then
+            has_target tools || step editor:nvim "$tools_dir/install-tools" $tool_mode nvim
+            step editor "$tools_dir/install-tools" --editor $tool_mode
+        fi
+        if has_target agents; then step agents "$tools_dir/install-tools" --agents $tool_mode; fi
+        if [ -n "$tools_named" ]; then step "${tools_named# }" "$tools_dir/install-tools" $tool_mode $tools_named; fi
+    }
+    if [ "$mode" != outdated ]; then
+        step links link
+        if has_target tools; then step completions "$tools_dir/setup-shell"; fi
+        if has_target editor; then step editor:plugins "$tools_dir/setup-editor" --parsers --spell; fi
+    fi
+    if has_target vscode; then
+        if [ "$machine_role" != workstation ]; then
+            say 'vscode: skipped for the server role.'
+        else
+            case $mode in update) set -- --update ;; install) set -- ;; outdated) set -- --check ;; esac
+            # shellcheck disable=SC2046
+            step vscode "$tools_dir/setup-vscode" "$@" $(backup_flag)
+        fi
+    fi
+    if any_package_target; then
+        if [ "$mode" = install ]; then
+            say 'packages: nothing to install; dots update upgrades them.'
+        else
+            set --; [ "$mode" = update ] || set -- --check
+            # shellcheck disable=SC2046
+            step packages "$tools_dir/update-packages" "$@" $(package_args)
+        fi
+    fi
+}
+
+command=${1:-help}
+[ "$#" -eq 0 ] || shift
+case $command in
+    update)
+        parse '--backup --no-pull' "$@"
+        select_targets
+        if [ "$pull" = true ]; then
+            sync_checkout merge
+            # Execute the newly checked-out dots, not this old script body.
+            exec "$tools_dir/dots" update --no-pull "$@"
+        fi
+        run_targets update
+        summary
+        say 'Restart shells and editors to load the changes.' ;;
+    outdated)
+        parse '' "$@"
+        select_targets
+        sync_checkout preview
+        run_targets outdated
+        say 'Nothing was changed.' ;;
+    install)
+        parse '--backup' "$@"
+        select_targets
+        run_targets install
+        summary ;;
+    link)
+        parse '--backup' "$@"
+        [ -z "$words" ] || die 'dots link takes no targets.' 2
+        link ;;
+    status)
+        [ "$#" -eq 0 ] || die 'dots status takes no arguments.' 2
+        load_role
+        say "Checkout: $repo_dir"
+        say "Role: $machine_role"
+        host=default
+        [ ! -r "$local_dir/host" ] || IFS= read -r host < "$local_dir/host" || :
+        say "Host: $host"
+        if [ -r "$targets_file" ]; then say "Targets: $(default_targets)"; else say "Targets: $(default_targets) (role default)"; fi
+        if command -v git >/dev/null 2>&1 && branch=$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD 2>/dev/null); then
+            state=clean
+            [ -z "$(git -C "$repo_dir" status --porcelain)" ] || state='local changes'
+            if upstream=$(git -C "$repo_dir" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null); then
+                counts=$(git -C "$repo_dir" rev-list --left-right --count "HEAD...$upstream")
+                say "Branch: $branch ($state; ${counts%%	*} ahead, ${counts##*	} behind $upstream as of the last fetch)"
+            else
+                say "Branch: $branch ($state; no upstream)"
+            fi
+        fi ;;
+    role)
+        case $# in
+            0) role ;;
+            1) case $1 in workstation|server) "$tools_dir/install-dotfiles" --role "$1" ;; *) die 'Usage: dots role [workstation|server]' 2 ;; esac ;;
+            *) die 'Usage: dots role [workstation|server]' 2 ;;
+        esac ;;
+    host)
+        case $# in
+            0) if [ -r "$local_dir/host" ]; then cat "$local_dir/host"; else say default; fi ;;
+            1) if [ "$1" = default ]; then rm -f "$local_dir/host"; say 'host: default'
+               else "$tools_dir/install-dotfiles" --host "$1"; fi ;;
+            *) die 'Usage: dots host [NAME|default]' 2 ;;
+        esac ;;
+    targets)
+        if [ "$#" -eq 0 ]; then load_role; default_targets; exit; fi
+        load_role
+        if [ "$*" = default ]; then rm -f "$targets_file"; say "targets: $(default_targets) (role default)"; exit; fi
+        for word in "$@"; do
+            [ "$word" = all ] || in_list "$word" "$known_targets" || die "Unknown target: $word (see dots help)" 2
+        done
+        mkdir -p "$local_dir"
+        say "$*" > "$targets_file"
+        say "targets: $*" ;;
+    adopt)
+        parse '--check' "$@"
+        [ -n "$words" ] || die 'Usage: dots adopt [--check] tools|editor|agents|all|TOOL...' 2
+        for word in $words; do
+            case $word in tools|editor|agents|all) ;; *)
+                in_list "$word" "$known_tools" || die "Unknown tool or profile: $word" 2 ;;
+            esac
+        done
+        set --; [ "$check" = false ] || set -- --check
+        selected=; tools_named=
+        for word in $words; do
+            case $word in
+                all) selected='tools editor agents' ;;
+                tools|editor|agents) in_list "$word" "$selected" || selected="$selected $word" ;;
+                *) tools_named="$tools_named $word" ;;
+            esac
+        done
+        ! has_target tools || step tools "$tools_dir/install-tools" --update "$@" --adopt-all
+        ! has_target editor || step editor "$tools_dir/install-tools" --editor --update "$@" --adopt-all
+        ! has_target agents || step agents "$tools_dir/install-tools" --agents --update "$@" --adopt-all
+        # shellcheck disable=SC2086
+        [ -z "$tools_named" ] || step "${tools_named# }" "$tools_dir/install-tools" --update "$@" --adopt $tools_named
+        summary ;;
+    help|--help|-h) usage ;;
+    *) die "Unknown command: $command (see dots help)" 2 ;;
+esac

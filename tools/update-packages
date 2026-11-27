@@ -1,8 +1,10 @@
 #!/bin/sh
-# Update everything that package managers present on this machine know about,
-# beyond the tool set this repository declares. Each manager runs independently;
-# a failure is reported and the remaining managers still run.
+# Internal step of `dots update packages|appstore|os`: upgrade everything the
+# package managers present on this machine know about. Each manager runs independently;
+# a failure is reported and the remaining managers still run. With the server
+# role (clusters), only stacks installed under $HOME are touched.
 set -u
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 check=false
 mas=false
 os=false
@@ -21,7 +23,7 @@ while [ "$#" -gt 0 ]; do
         --skip=*) skip=${1#--skip=} ;;
         --help)
             cat <<HELP
-Usage: update-system [--check] [--mas] [--os] [--all] [--only LIST] [--skip LIST]
+Usage: update-packages [--check] [--mas] [--os] [--all] [--only LIST] [--skip LIST]
 
 Upgrade every package of each manager found on this machine. By default only
 user-level managers run; the ones needing sudo are opt-in:
@@ -45,6 +47,9 @@ user-level managers run; the ones needing sudo are opt-in:
   --only   Comma-separated managers to run instead, e.g. --only brew,mas.
   --skip   Comma-separated managers to leave alone.
 
+With the server role (dotfiles/local/role), only user-local stacks are updated:
+brew and npm run only when installed under \$HOME, and mas and os never run.
+
 Managers: $managers
 HELP
             exit 0 ;;
@@ -52,6 +57,9 @@ HELP
     esac
     shift
 done
+# shellcheck source=/dev/null
+. "$repo_dir/tools/role.sh"
+role=$(dotfiles_read_role) || exit
 for name in $(printf '%s' "$only,$skip" | tr ',' ' '); do
     case " $managers " in *" $name "*) ;; *) printf 'Unknown manager: %s\n' "$name" >&2; exit 2 ;; esac
 done
@@ -60,6 +68,13 @@ for dir in "$HOME/.local/bin" "$HOME/.pixi/bin" "$HOME/.cargo/bin" /opt/homebrew
 done
 export PATH
 has() { command -v "$1" >/dev/null 2>&1; }
+# On servers, a manager may run only when its install prefix is under $HOME.
+local_stack() {
+    [ "$role" = server ] || return 0
+    prefix=$("$@" 2>/dev/null) && case $prefix/ in "$HOME"/*) return 0 ;; esac
+    held="$held $name"
+    return 1
+}
 selected() {
     case ",$skip," in *",$1,"*) return 1 ;; esac
     if [ -n "$only" ]; then
@@ -69,6 +84,7 @@ selected() {
 }
 ran=
 failed=
+held=
 step() {
     name=$1; shift
     printf '\n==> %s\n' "$name"
@@ -77,7 +93,8 @@ step() {
 
 do_brew() {
     HOMEBREW_NO_AUTO_UPDATE=1; export HOMEBREW_NO_AUTO_UPDATE
-    brew update || return
+    # dots refreshes the index once per run and sets DOTFILES_BREW_UPDATED.
+    [ -n "${DOTFILES_BREW_UPDATED:-}" ] || brew update || return
     if [ "$check" = true ]; then
         brew outdated --verbose || true
     else
@@ -155,18 +172,23 @@ do_os() {
     fi
 }
 
-selected brew && has brew && step brew do_brew
-selected mas && has mas && step mas do_mas
+name=brew; selected brew && has brew && local_stack brew --prefix && step brew do_brew
+if [ "$role" = server ]; then
+    for name in mas os; do selected "$name" && held="$held $name"; done
+else
+    selected mas && has mas && step mas do_mas
+fi
 selected pixi && has pixi && step pixi do_pixi
-selected npm && has npm && step npm do_npm
+name=npm; selected npm && has npm && local_stack npm prefix --global && step npm do_npm
 selected uv && has uv && step uv do_uv
 selected pipx && has pipx && step pipx do_pipx
 selected rustup && has rustup && step rustup do_rustup
 selected cargo && has cargo-install-update && step cargo do_cargo
 selected fisher && has fish && fish -c 'functions -q fisher' 2>/dev/null && step fisher do_fisher
-selected os && step os do_os
+[ "$role" = server ] || ! selected os || step os do_os
 
 printf '\nDone:%s\n' "${ran:- nothing}"
+[ -z "$held" ] || printf 'Skipped on this server (not under %s):%s\n' "$HOME" "$held"
 if [ -n "$failed" ]; then
     printf 'Failed:%s\n' "$failed" >&2
     exit 1

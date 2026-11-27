@@ -12,11 +12,14 @@ The normal checkout is `~/.config`. The repository has no submodules.
 
 ```sh
 git clone https://github.com/mvondomaros/dotfiles.git ~/.config
-~/.config/tools/install-dotfiles --host marc3a --role server
+~/.config/tools/dots role server   # workstations can skip this (the default)
+~/.config/tools/dots host marc3a   # only on hosts with a layer in dotfiles/hosts/
+~/.config/tools/dots install       # link configuration, install default targets
 ```
 
-If `~/.config` already exists, keep it and clone somewhere else, then run that
-checkout's `tools/install-dotfiles`. The installer links the managed application
+Everything goes through `dots` (see [Updates](#updates)). If `~/.config` already
+exists, keep it and clone somewhere else, then run that checkout's `tools/dots`.
+Linking (`dots link`, also part of `install` and `update`) puts the managed application
 configurations into `$XDG_CONFIG_HOME` (default `~/.config`). It does not replace
 existing files unless `--backup` is supplied. Review `skip:` messages. Backups
 are stored under `$XDG_STATE_HOME/dotfiles/backups/`, default
@@ -26,11 +29,13 @@ and migrated rather than silently sourced from an old startup file.
 Git uses a real `$XDG_CONFIG_HOME/git/` directory with only `config` linked, so its
 relative include finds the installed private overrides even with an external
 checkout. If an older installation linked the entire `git/` directory, rerun
-`tools/install-dotfiles --backup` to preserve that link and migrate it.
+`dots link --backup` to preserve that link and migrate it.
 
-The installer does not install packages, initialize submodules, change the login
-shell, or modify the system profile. Run commands by their explicit paths: the
-repository's `tools` directory is intentionally not added to PATH.
+Linking does not install packages, initialize submodules, change the login
+shell, or modify the system profile. It links `~/.local/bin/dots` to the
+checkout's `tools/dots`, the only command it puts on PATH; the other scripts in
+`tools/` are internal steps of `dots`. Bash and fish complete its commands,
+targets, and tool names.
 
 ## Configuration layers
 
@@ -50,12 +55,12 @@ native configuration or select another config through its environment variable
 in an environment hook; there is no generated configuration/merge framework.
 
 Each home directory also selects a role with an ignored
-`$XDG_CONFIG_HOME/dotfiles/local/role` file. Use the installer to set it:
+`$XDG_CONFIG_HOME/dotfiles/local/role` file. Set it with `dots`:
 
 ```sh
-~/.config/tools/install-dotfiles --role server
+dots role server
 # For a workstation (also the default when no role file exists):
-~/.config/tools/install-dotfiles --role workstation
+dots role workstation
 ```
 
 | Role | Shared shell/editor/agent tools | Python tooling | Typst tooling |
@@ -65,7 +70,7 @@ Each home directory also selects a role with an ignored
 
 The role controls both provisioning and Neovim integration, including plugins,
 language servers, formatters, lint commands, parser selection, and health checks.
-`--all` applies all profiles appropriate to that role. Existing installations
+The `all` target applies all profiles appropriate to that role. Existing installations
 without a role file retain workstation behavior. `DOTFILES_ROLE=server` or
 `DOTFILES_ROLE=workstation` overrides the file for a single session or command.
 There is no central hostname inventory: an NFS-shared cluster home needs only
@@ -78,7 +83,7 @@ if their executables are still on PATH. Project environments and system Python
 are independent of these editor roles. Pixi remains available on servers as the
 package manager used to provision the native Tree-sitter generator.
 
-`install-dotfiles --host NAME` writes a private selector to
+`dots host NAME` writes a private selector to
 `dotfiles/local/host`. Selection is explicit, not based on a compute node's
 hostname: every node sharing a cluster home uses the same profile. Without a
 selection, shared/platform settings still work. `DOTFILES_HOST` can override
@@ -118,7 +123,7 @@ other site/scheduler policies remain the site's responsibility.
 ## Install CLI tools
 
 ```sh
-~/.config/tools/install-tools
+dots install tools
 ```
 
 On macOS, install [Homebrew](https://brew.sh) first. The command applies
@@ -152,7 +157,7 @@ On Linux, the installer:
 
 For a cluster without outbound HTTPS, transfer archives named
 `<command>-<architecture><release-suffix>` to a temporary directory on that cluster and
-run `DOTFILES_DOWNLOAD_DIR=/path/to/archives tools/install-tools`. The same pinned
+run `DOTFILES_DOWNLOAD_DIR=/path/to/archives dots install tools`. The same pinned
 checksums and executable checks apply. Remove the supplied archives afterward;
 the installer does not maintain a download cache.
 
@@ -180,37 +185,37 @@ kept and uses the basic editor configuration if the full setup is unsupported.
 Linux uses rsync from the OS or site modules; dotfiles do not build a separate
 rsync toolchain on clusters.
 
-Explicit updates are scoped to this tool set:
+The `tools` target is scoped to this tool set:
 
 ```sh
-~/.config/tools/update-tools --check
-~/.config/tools/update-tools
+dots outdated tools
+dots update tools
 # Linux: preview or adopt every eligible user-installed tool:
-~/.config/tools/update-tools --check --adopt-all
-~/.config/tools/update-tools --adopt-all
-# Or adopt/install/update a particular tool:
-~/.config/tools/update-tools --adopt pixi
-~/.config/tools/install-tools nvim
-~/.config/tools/update-tools rg fd
+dots adopt --check tools
+dots adopt tools
+# Or adopt/install/update particular tools:
+dots adopt pixi
+dots install nvim
+dots update rg fd
 ```
 
 On Linux, updates replace only installations managed by this installer. Existing
 system tools and other local installations are reused. On macOS, updates apply
 only the selected Brewfile profile or explicitly selected packages. The private
 Tree-sitter environment is replaced together with its managed generator;
-user Pixi environments and unrelated Homebrew packages are not upgraded.
+user Pixi environments and unrelated Homebrew packages are upgraded only by the
+`packages` target.
 
-`--adopt-all` covers the selected CLI core (ten tools on workstations, eight on servers); it
-is not a scan of everything installed in your account. `--adopt TOOL ...` selects
-a subset. Adoption is Linux-only: eligible executables must be user-owned and
+`dots adopt tools` covers the CLI core (ten tools on workstations, eight on servers); it
+is not a scan of everything installed in your account. `dots adopt TOOL...`
+selects a subset. Adoption is Linux-only: eligible executables must be user-owned and
 resolve inside `~/.local/bin`, `~/.pixi/bin`, or `~/.opt`. System/module paths and
 symlinks to them are protected. Newer-than-pinned versions are retained rather
-than downgraded. `--check` reports installed/pinned versions, ownership, and the
-planned action without installing tools. On macOS it uses `brew outdated` and
-preserves Homebrew's exit status (which may be nonzero when updates exist).
-With `--editor --adopt-all`, the selected set is seven Linux editor tools on
-workstations or four on servers;
-`--agents --adopt-all` selects the two coding agents.
+than downgraded. `dots adopt --check` reports installed/pinned versions, ownership,
+and the planned action without installing tools; so does `dots outdated`, which uses
+`brew outdated` on macOS. With `dots adopt editor`, the selected set is seven
+Linux editor tools on workstations or four on servers; `dots adopt agents`
+selects the two coding agents, and `dots adopt all` all three profiles.
 
 Adoption first downloads, verifies, and runs the replacement, then backs up the
 original launcher entries under
@@ -281,13 +286,12 @@ if needed (`brew install --cask visual-studio-code`). Linux desktop installation
 uses the system package manager. Provision the shared tools, then apply VS Code:
 
 ```sh
-~/.config/tools/install-tools
-~/.config/tools/install-tools --editor
-~/.config/tools/setup-vscode --check
-~/.config/tools/setup-vscode --backup
+dots install tools editor
+dots outdated vscode
+dots install vscode --backup
 ```
 
-`--check` is offline and exits nonzero for missing tools, extensions, or config
+`dots outdated vscode` is offline and exits nonzero for missing tools, extensions, or config
 links, and for installed extensions missing from the manifest. Setup installs
 missing declared extensions, backs up conflicting settings only with `--backup`,
 and leaves Settings Sync under VS Code's control. On a new machine where Sync is
@@ -295,12 +299,11 @@ enabled, run **Settings Sync: Turn Off** once in VS Code, leaving the option to
 clear cloud data unchecked. The CLI's `--sync off` flag is only a session override;
 it does not change the saved preference. Backups use the installer's normal state
 directory. Extension auto-updates are disabled; update the declared
-set explicitly with `tools/setup-vscode --update` or
-`tools/update-dotfiles --vscode`. Setup installs each listed extension with
+set explicitly with `dots update vscode`. Setup installs each listed extension with
 `--do-not-include-pack-dependencies`: companion extensions are explicitly listed,
 so changing an upstream extension pack does not silently expand the setup or
 reinstall Pylance. Additional installed extensions are preserved and reported by
-`--check`. Add desired extensions to the manifest before sharing the setup.
+`dots outdated vscode`. Add desired extensions to the manifest before sharing the setup.
 Server roles skip VS Code setup and configuration entirely.
 
 Python uses ty for language services and Ruff for linting, formatting, and save
@@ -325,9 +328,9 @@ belong in `pyproject.toml`, `.editorconfig`, or project `.vscode/` settings.
 Personal machine-specific exceptions can use local workspace or remote settings;
 there is no generated user-settings merge layer.
 
-For configuration links alone, use `tools/install-dotfiles --vscode --backup`.
-This changes neither extensions nor Settings Sync. The normal installer also
-links VS Code settings on workstations, using its usual preserve/backup policy.
+For configuration links alone, use `dots link --backup`. This changes neither
+extensions nor Settings Sync; it links VS Code settings on workstations along
+with everything else, using the usual preserve/backup policy.
 
 ### Terminal editors
 
@@ -344,7 +347,7 @@ or `<Space>hk` shows its key reference. `/` and `n`/`N` search within a file;
 Insert-mode Ctrl+n/p completes words and Ctrl+x Ctrl+f completes filenames.
 There are no project-wide scans, builds, formatters, or language servers in
 the fallback. The local Ayu theme is optional, and persistent undo is enabled
-when its state directory has been provisioned by `tools/install-dotfiles`.
+when its state directory has been provisioned by `dots link`.
 
 Shared mnemonic keys use **subject + action** after Space:
 
@@ -368,36 +371,29 @@ manager, LaTeX integration, dashboard, or animation layer.
 Provision tools, plugins, and parsers explicitly:
 
 ```sh
-~/.config/tools/install-tools
-~/.config/tools/install-tools --editor
-~/.config/tools/install-tools --agents
-~/.config/tools/setup-editor --parsers --spell
+dots install tools editor agents
 ```
 
-`--editor` installs shfmt, ShellCheck, StyLua, Tree-sitter CLI, Tinymist, Typst,
+The `editor` target also restores the pinned plugins, parsers, and German
+spelling dictionary. It installs shfmt, ShellCheck, StyLua, Tree-sitter CLI, Tinymist, Typst,
 and websocat on Linux workstations. Servers select only shfmt, ShellCheck,
 StyLua, and Tree-sitter CLI. macOS also installs the Bash and Fish language servers.
 Workstation Python tools belong to CLI core. Node and Fish language servers
 on Linux are optional existing site tools. No TeX distribution or PDF viewer
 is installed. Both platforms use the same parsers and keybindings.
 
-`--agents` installs Codex CLI and Claude Code: native Homebrew casks on macOS,
+The `agents` target installs Codex CLI and Claude Code: native Homebrew casks on macOS,
 and verified release packages on Linux. Codex's helper executables and sandbox
 resources are retained. The managed Linux Claude launcher disables its native
-self-updater so `update-tools --agents` owns updates. Existing working agent
-installations are reused; Linux adoption remains explicit with `--adopt` or
-`--adopt-all`. Agent logins, credentials, settings, and approval controls remain
+self-updater so `dots update agents` owns updates. Existing working agent
+installations are reused; Linux adoption remains explicit with `dots adopt`. Agent logins, credentials, settings, and approval controls remain
 in the agents' native configuration locations.
 
-Updates use the same profiles:
+Updates use the same targets:
 
 ```sh
-~/.config/tools/update-tools --editor --check
-~/.config/tools/update-tools --editor
-~/.config/tools/update-tools --agents --check
-~/.config/tools/update-tools --agents
-# After pulling a changed plugin lockfile:
-~/.config/tools/setup-editor --parsers
+dots outdated editor agents
+dots update editor agents   # also restores a changed plugin lockfile
 ```
 
 Tree-sitter uses its current `main` API with a global generator (0.26.1+) and a C
@@ -463,13 +459,13 @@ platform. The editor and agents run on the remote machine.
 
 Code and Typst format on save when a formatter is available; text and Markdown
 preserve authored line breaks. Text, Markdown, Typst, and Git commits enable soft
-wrapping and spelling. English is bundled; `setup-editor --spell` downloads a
+wrapping and spelling. English is bundled; the `editor` target downloads a
 checksum-verified German dictionary explicitly. `:checkhealth dotfiles` reports
 which shared tools are available and which installer profile supplies them.
 
 Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
-by `tools/setup-shell`, never by shell startup.
+by the `tools` target, never by shell startup.
 
 On every host, the installer links `~/.ssh/config` to `ssh/config`, which holds
 only shared client defaults: keepalives, keychain use, and connection reuse
@@ -484,8 +480,8 @@ at `~/.config` because SSH does not read `XDG_CONFIG_HOME`. An existing
 shortens. The Slurm host is not in that file, because the cluster reads the same
 checkout: the macOS environment hooks set `SJOBS_HOST=marc3a` unless it is
 already set, and on the cluster `sjobs` uses the local `squeue`. `sjobs` itself is a
-Pixi global; a plain `update-tools` (no profile or tool names) also runs
-`pixi global update sjobs` when that environment is installed.
+Pixi global; `dots update tools` also runs `pixi global update sjobs` when that
+environment is installed (`packages` updates it with every other Pixi global).
 
 Use `btop` for interactive resource monitoring on macOS; the CLI Homebrew profile
 installs it. Apple's privileged `top` cannot use Kitty's user terminfo, so
@@ -518,7 +514,7 @@ the terminal palette comes from the workstation's terminal emulator over SSH.
 Reload Kitty with Ctrl+Shift+F5 and open a new shell to pick up all colors.
 Restart TUIs/editors after updating their configuration.
 
-Codex CLI and Claude Code are optional native tools in the `--agents` profile; the CLI core profile does not install them. After
+Codex CLI and Claude Code are optional native tools in the `agents` target; the CLI core profile does not install them. After
 installing them, apply the tracked agent themes explicitly:
 
 ```sh
@@ -550,27 +546,26 @@ git -c submodule.recurse=false pull --ff-only
 ```
 
 Before provisioning, select the role. On a server use
-`./tools/install-dotfiles --role server --backup`; on a workstation the default
-is suitable, or set `--role workstation` explicitly. Then run:
+`./tools/dots role server`; on a workstation the default is suitable. Then run:
 
 ```sh
-./tools/update-dotfiles --no-pull --backup --all
+./tools/dots update --no-pull --backup
 ```
 
-The first pull bootstraps the updater, which was absent from the starting
+The first pull bootstraps `dots`, which was absent from the starting
 revision. `--no-pull` applies that checkout immediately. `--backup` migrates an
 old symlinked XDG `git/` directory into a real directory with a linked config;
 it also preserves any other conflicting files before replacing them. Review
 installer `skip:` messages when omitting `--backup`. Existing host selection
 and `dotfiles/local/` files are retained; there is no need to repeat `--host`.
 
-`--tools` updates CLI core and regenerates cached completions. `--editor` updates
+`tools` updates CLI core and regenerates cached completions. `editor` updates
 Neovim and editor dependencies, restores the exact plugin commits, and compiles
 the role's shared parsers. Server roles omit Python and Typst at both stages.
 Old parser directories are preserved in state backups.
-`--agents` updates the two optional coding CLIs; native login/configuration and
-the separately applied agent themes remain as described above. Omit
-`--editor`/`--agents` on machines where those features are not wanted. The removed
+`agents` updates the two optional coding CLIs; native login/configuration and
+the separately applied agent themes remain as described above. Leave `editor`
+or `agents` out of a machine's targets where those features are not wanted. The removed
 Vim submodule is no longer used or fetched; leftover submodule directories and
 Git metadata can be reviewed and removed separately.
 
@@ -580,64 +575,74 @@ provisioning requires 0.12+; use a supported site module, or explicitly preview
 and adopt an eligible user installation:
 
 ```sh
-./tools/update-tools --check --adopt nvim
-./tools/update-tools --adopt nvim
-./tools/update-dotfiles --no-pull --editor
+./tools/dots adopt --check nvim
+./tools/dots adopt nvim
+./tools/dots update --no-pull editor
 ```
 
-Site/system binaries are protected even with `--adopt`. Vim and older Neovim
+Site/system binaries are protected even with `dots adopt`. Vim and older Neovim
 remain usable as the basic fallback. `DOTFILES_NVIM_MODE=basic nvim` also opens
 the fallback while repairing an incomplete full-editor update.
 
-For subsequent updates, use an explicit command with the profiles wanted on
-that machine:
+### Updates
 
 ```sh
-~/.config/tools/update-dotfiles --check --all
-~/.config/tools/update-dotfiles --all
-# Configuration links only:
-~/.config/tools/update-dotfiles
+dots outdated            # fetch; list incoming commits and available updates
+dots update              # pull, relink, update this machine's default targets
+dots update editor rg    # just these targets and tools
+dots link                # configuration links only
+dots status              # role, host, default targets, checkout state
+dots targets tools editor packages   # change this machine's defaults
+dots targets default     # back to the role default
 ```
 
-`--all` selects CLI core, editor, agents, workstation VS Code extensions, and
-the user-level system package managers together; `--backup` remains a separate choice for replacing conflicting
-configuration entries with backups.
-The selected role determines whether Python and Typst belong to those profiles.
-The default updates Git and reapplies configuration links. Profiles are explicit
-on each invocation; include `--editor` whenever refreshing a provisioned full
-Neovim setup. Git uses the current branch's configured upstream and requires a
-clean checkout with no local-only commits. Updates fast-forward without merging
-or rebasing local work. Submodules are left alone. `--check` fetches refs and
-lists incoming commits and planned steps; it leaves HEAD, configuration,
-packages, and plugins unchanged. It is a workflow preview; use
-`tools/update-tools --check` for individual tool versions.
+| Target | Updates |
+|---|---|
+| `tools` | CLI core and cached shell completions |
+| `editor` | Neovim tools, pinned plugins, parsers, spelling |
+| `agents` | Codex CLI and Claude Code |
+| `vscode` | declared VS Code extensions and settings (workstations) |
+| `packages` | every package of the user-level package managers found |
+| `appstore` | Mac App Store apps (sudo) |
+| `os` | OS updates (sudo, never restarts) |
+| `all` | `tools editor agents vscode packages` |
 
-After a successful pull the updater executes the newly checked-out script.
-Failures stop subsequent steps and leave completed steps in place. Fix the
-reported issue and rerun with `--no-pull` and the same profile flags. Private
-configuration and per-tool backup policies remain in the underlying installers.
-The updater runs only when invoked; shell and editor startup stay offline.
+Tool names such as `rg` or `claude` select single tools. When no targets are
+named, `update`, `outdated`, and `install` use the machine's defaults from the
+ignored `dotfiles/local/targets` file, set with `dots targets`. Without that
+file the role decides: `all` on workstations, `tools editor packages` on
+servers. The role also determines whether Python and Typst belong to the
+`tools` and `editor` targets.
 
-Beyond this repository's tool set, `tools/update-system` upgrades every
-package of the user-level package managers on the machine: Homebrew formulae
-and casks, all Pixi globals, global npm packages (except `npm`/`corepack`,
-which belong to Node), uv tools, pipx, rustup, `cargo install-update`, and
-fisher. Absent managers are skipped; a failing manager is reported and the rest
-still run. Upgrades run without confirmation prompts (`brew upgrade --yes`).
-The managers that need sudo are opt-in: `--mas` upgrades Mac App Store apps,
-`--os` installs OS updates (`softwareupdate`, or apt/dnf on Linux, with
-`--agree-to-license`, `--yes`, or `--assumeyes`; never restarting), and `--all`
-selects both.
+Every `update` pulls first. Git uses the current branch's configured upstream
+and requires a clean checkout with no local-only commits; updates fast-forward
+without merging or rebasing local work, and submodules are left alone. After a
+successful pull, `dots` executes the newly checked-out version of itself.
+`--no-pull` applies the current checkout, local changes included, and `--backup`
+preserves and replaces conflicting configuration entries. `dots outdated`
+fetches refs and runs each target's preview; it leaves HEAD, configuration,
+packages, and plugins unchanged, though Homebrew refreshes its package index.
+Homebrew's index is refreshed once per run, not once per target.
 
-```sh
-~/.config/tools/update-system --check --all     # list what would change
-~/.config/tools/update-system                   # user-level managers only
-~/.config/tools/update-system --all             # also App Store and OS (sudo)
-~/.config/tools/update-dotfiles --all --mas --os # everything in one run
-```
+A failed pull stops everything. After that, a failed step is reported and the
+remaining steps still run; the summary lists what failed and `dots` exits
+nonzero. Fix the reported issue and rerun `dots update --no-pull` with the
+same targets. Private configuration and per-tool backup policies remain in the
+underlying steps. `dots` runs only when invoked; shell and editor startup stay
+offline.
 
-In `update-dotfiles`, `--system` runs the user-level managers last, `--all`
-includes it, and `--mas`/`--os` are passed through (each implies `--system`).
+`packages` upgrades every package of the user-level package managers on the
+machine: Homebrew formulae and casks, all Pixi globals, global npm packages
+(except `npm`/`corepack`, which belong to Node), uv tools, pipx, rustup,
+`cargo install-update`, and fisher. Absent managers are skipped, and upgrades
+run without confirmation prompts (`brew upgrade --yes`). `appstore` and `os`
+need sudo and are never part of `all`; `os` installs `softwareupdate`, apt, or
+dnf updates with `--agree-to-license`, `--yes`, or `--assumeyes`, and never
+restarts. With the server role (clusters), only stacks under `$HOME` are
+updated: Homebrew and npm run only when installed there, and `appstore` and
+`os` never run, even when requested.
+
+### Verification
 
 Verify changes locally with:
 

@@ -62,13 +62,15 @@ class DotfilesTests(unittest.TestCase):
     def updater_helpers(self, real_installer=False):
         self.update_log = self.root / 'update.log'
         self.env['DOTFILES_UPDATE_LOG'] = str(self.update_log)
-        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor', 'setup-vscode', 'update-system']:
+        for name in ['install-tools', 'install-dotfiles', 'setup-shell', 'setup-editor', 'setup-vscode', 'update-packages']:
             if name == 'install-dotfiles' and real_installer:
                 continue
             helper = self.repo / 'tools' / name
             helper.write_text('#!/bin/sh\nprintf "%s\\n" "' + name + ' $*" >> "$DOTFILES_UPDATE_LOG"\n')
             helper.chmod(0o755)
         self.mock('git', 'exec ' + shlex.quote(GIT) + ' "$@"')
+        # dots appends /opt/homebrew/bin; never reach a real Pixi from the tests.
+        self.mock('pixi', 'exit 1')
 
     def updater_git_fixture(self):
         origin = self.root / 'upstream.git'
@@ -87,8 +89,8 @@ class DotfilesTests(unittest.TestCase):
                           '-c', 'user.email=dotfiles@example.invalid', 'commit', '-m', message])
         return self.run_command([GIT, '-C', str(directory), 'rev-parse', 'HEAD']).stdout.strip()
 
-    def update_dotfiles(self, *args, code=0):
-        return self.run_command([str(self.repo / 'tools/update-dotfiles')] + list(args), code=code)
+    def dots(self, *args, code=0):
+        return self.run_command([str(self.repo / 'tools/dots')] + list(args), code=code)
 
     def bash(self, command, interactive=False):
         return self.run_command(['/bin/bash', '--noprofile', '--norc', '-ic' if interactive else '-c', command])
@@ -110,23 +112,25 @@ class DotfilesTests(unittest.TestCase):
         release = self.root / 'release'
         self.run_command([GIT, 'clone', str(origin), str(release)])
         (release / 'tools/install-dotfiles').write_text(current_installer)
-        updater = release / 'tools/update-dotfiles'
-        updater.write_text(updater.read_text().replace('set -eu\n',
-                           'set -eu\nprintf "new-updater\\n" >> "$DOTFILES_UPDATE_LOG"\n', 1))
+        updater = release / 'tools/dots'
+        updater.write_text(updater.read_text().replace('set -u\n',
+                           'set -u\nprintf "new-updater\\n" >> "$DOTFILES_UPDATE_LOG"\n', 1))
         released = self.git_commit(release, 'migrate Git links and refresh updater')
         self.run_command([GIT, '-C', str(release), 'push'])
-        profiles = ['--backup', '--all']
-        result = self.update_dotfiles('--check', *profiles)
+        result = self.dots('outdated', 'all')
         self.assertIn('1 incoming commit', result.stdout)
-        self.assertFalse(self.update_log.exists())
+        self.assertEqual(self.update_log.read_text().splitlines(), [
+            'install-tools --check', 'install-tools --editor --check', 'install-tools --agents --check',
+            'setup-vscode --check', 'update-packages --check'])
+        self.update_log.unlink()
         self.assertTrue(git_dir.is_symlink())
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), original)
-        self.update_dotfiles(*profiles)
+        self.dots('update', 'all', '--backup')
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), released)
         self.assertEqual(self.update_log.read_text().splitlines(), [
-            'new-updater', 'update-tools ', 'update-tools --editor', 'update-tools --agents',
-            'setup-shell ', 'setup-editor --parsers --spell', 'setup-vscode --update --backup',
-            'update-system '])
+            'new-updater', 'install-tools --update', 'install-tools --editor --update',
+            'install-tools --agents --update', 'setup-shell ', 'setup-editor --parsers --spell',
+            'setup-vscode --update --backup', 'update-packages '])
         self.assertFalse(git_dir.is_symlink())
         self.assertTrue((git_dir / 'config').is_symlink())
         self.assertEqual(self.run_command([GIT, 'config', '--file', str(git_dir / 'config'),
@@ -142,19 +146,19 @@ class DotfilesTests(unittest.TestCase):
         file = self.repo / 'vimrc'
         before = file.read_bytes()
         file.write_bytes(before + b'\n" local change\n')
-        result = self.update_dotfiles(code=1)
+        result = self.dots('update', code=1)
         self.assertIn('Checkout has local changes', result.stderr)
         self.assertEqual(file.read_bytes(), before + b'\n" local change\n')
         self.run_command([GIT, '-C', str(self.repo), 'add', 'vimrc'])
-        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        self.assertIn('Checkout has local changes', self.dots('update', code=1).stderr)
         self.run_command([GIT, '-C', str(self.repo), 'reset', '--', 'vimrc'])
         file.write_bytes(before)
         unknown = self.repo / 'tools/untracked-file'
         unknown.write_text('preserve me\n')
-        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        self.assertIn('Checkout has local changes', self.dots('update', code=1).stderr)
         unknown.unlink()
         self.run_command([GIT, '-C', str(self.repo), 'checkout', '--detach'])
-        self.assertIn('Detached HEAD', self.update_dotfiles(code=1).stderr)
+        self.assertIn('Detached HEAD', self.dots('update', code=1).stderr)
         self.assertFalse(self.update_log.exists())
 
     @unittest.skipUnless(GIT, 'Git unavailable')
@@ -165,12 +169,12 @@ class DotfilesTests(unittest.TestCase):
         self.run_command([GIT, 'clone', str(origin), str(release)])
         (self.repo / 'vimrc').write_text('" local commit\n')
         local = self.git_commit(self.repo, 'local work')
-        result = self.update_dotfiles(code=1)
+        result = self.dots('update', code=1)
         self.assertIn('1 local-only commits (0 incoming)', result.stderr)
         (release / 'vimrc').write_text('" upstream commit\n')
         self.git_commit(release, 'upstream work')
         self.run_command([GIT, '-C', str(release), 'push'])
-        result = self.update_dotfiles(code=1)
+        result = self.dots('update', code=1)
         self.assertIn('1 local-only commits (1 incoming)', result.stderr)
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), local)
         self.assertFalse(self.update_log.exists())
@@ -181,10 +185,10 @@ class DotfilesTests(unittest.TestCase):
         origin = self.updater_git_fixture()
         head = self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip()
         self.run_command([GIT, '-C', str(self.repo), 'branch', '--unset-upstream'])
-        self.assertIn('Configure an upstream', self.update_dotfiles(code=1).stderr)
+        self.assertIn('Configure an upstream', self.dots('update', code=1).stderr)
         self.run_command([GIT, '-C', str(self.repo), 'branch', '--set-upstream-to=origin/main'])
         origin.rename(self.root / 'offline-origin')
-        self.update_dotfiles(code=128)
+        self.dots('update', code=128)
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), head)
         self.assertFalse(self.update_log.exists())
 
@@ -200,48 +204,87 @@ case "$*" in *" fetch "*)
     exit ;;
 esac
 exec ''' + shlex.quote(GIT) + ''' "$@"''')
-        self.assertIn('Checkout has local changes', self.update_dotfiles(code=1).stderr)
+        self.assertIn('Checkout has local changes', self.dots('update', code=1).stderr)
         self.assertIn('edited during fetch', (self.repo / 'vimrc').read_text())
         self.assertFalse(self.update_log.exists())
 
-    @unittest.skipUnless(GIT, 'Git unavailable')
-    def test_self_update_profiles_are_explicit_and_failures_stop(self):
+    def test_dots_targets_defaults_and_failures_continue(self):
         self.updater_helpers()
-        self.update_dotfiles('--no-pull', '--check', '--tools', '--editor', '--agents')
-        self.assertFalse(self.update_log.exists())
-        self.update_dotfiles('--no-pull')
-        self.assertEqual(self.update_log.read_text(), 'install-dotfiles \n')
-        self.update_log.unlink()
-        self.update_dotfiles('--no-pull', '--editor', '--backup')
-        self.assertEqual(self.update_log.read_text().splitlines(), [
-            'update-tools nvim', 'update-tools --editor', 'install-dotfiles --backup',
+        log = lambda: self.update_log.read_text().splitlines()
+        self.dots('update', '--no-pull', 'editor', '--backup')
+        self.assertEqual(log(), [
+            'install-tools --update nvim', 'install-tools --editor --update', 'install-dotfiles --backup',
             'setup-editor --parsers --spell'])
         self.update_log.unlink()
-        self.update_dotfiles('--no-pull', '--all', '--backup')
-        self.assertEqual(self.update_log.read_text().splitlines(), [
-            'update-tools ', 'update-tools --editor', 'update-tools --agents',
-            'install-dotfiles --backup', 'setup-shell ', 'setup-editor --parsers --spell',
-            'setup-vscode --update --backup', 'update-system '])
+        self.dots('update', '--no-pull', 'rg', 'fd')
+        self.assertEqual(log(), ['install-tools --update rg fd', 'install-dotfiles '])
         self.update_log.unlink()
-        helper = self.repo / 'tools/update-tools'
-        helper.write_text(helper.read_text() + 'test "$*" != --editor || exit 9\n')
-        self.update_dotfiles('--no-pull', '--tools', '--editor', '--agents', code=9)
-        self.assertEqual(self.update_log.read_text().splitlines(), ['update-tools ', 'update-tools --editor'])
-        self.update_dotfiles('--nonsense', code=2)
+        # Without targets, the role default applies; workstations get all.
+        self.dots('update', '--no-pull')
+        self.assertEqual(log()[-1], 'update-packages ')
+        self.assertIn('setup-vscode --update', log())
+        self.update_log.unlink()
+        self.assertEqual(self.dots('targets').stdout, 'all\n')
+        self.dots('targets', 'tools', 'packages', 'os')
+        self.assertIn('Targets: tools packages os\n', self.dots('status').stdout)
+        self.dots('update', '--no-pull')
+        self.assertEqual(log(), ['install-tools --update', 'install-dotfiles ', 'setup-shell ',
+                                 'update-packages --os'])
+        self.update_log.unlink()
+        self.dots('update', '--no-pull', 'appstore', 'os')
+        self.assertEqual(log(), ['install-dotfiles ', 'update-packages --only mas,os'])
+        self.update_log.unlink()
+        self.dots('targets', 'default')
+        (self.home / '.config/dotfiles/local/role').write_text('server\n')
+        self.assertEqual(self.dots('targets').stdout, 'tools editor packages\n')
+        self.dots('install')
+        self.assertEqual(log(), [
+            'install-tools ', 'install-tools --editor', 'install-dotfiles ', 'setup-shell ',
+            'setup-editor --parsers --spell'])
+        self.update_log.unlink()
+        # A failed step is reported, and the remaining steps still run.
+        helper = self.repo / 'tools/install-tools'
+        helper.write_text(helper.read_text() + 'test "$1" != --editor || exit 9\n')
+        result = self.dots('update', '--no-pull', 'tools', 'editor', 'agents', code=1)
+        self.assertIn('Failed: editor', result.stderr)
+        self.assertEqual(log(), [
+            'install-tools --update', 'install-tools --editor --update', 'install-tools --agents --update',
+            'install-dotfiles ', 'setup-shell ', 'setup-editor --parsers --spell'])
+        self.update_log.unlink()
+        self.dots('adopt', '--check', 'editor', 'rg', code=1)  # the editor step still fails
+        self.assertEqual(log(), ['install-tools --editor --update --check --adopt-all',
+                                 'install-tools --update --check --adopt rg'])
+        for args in [['update', '--nonsense'], ['update', 'nonsense'], ['link', 'tools'], ['adopt'],
+                     ['adopt', 'vscode'],
+                     ['targets', 'rg'], ['outdated', '--backup'], ['frobnicate']]:
+            self.dots(*args, code=2)
 
-    def test_system_update_sudo_managers_are_opt_in_and_passed_through(self):
-        self.updater_helpers()
-        result = self.update_dotfiles('--no-pull', '--check', '--os', '--mas')
-        self.assertIn('package managers found (with --os --mas).', result.stdout)
-        self.assertFalse(self.update_log.exists())
-        self.update_dotfiles('--no-pull', '--system')
-        self.assertEqual(self.update_log.read_text().splitlines(), ['install-dotfiles ', 'update-system '])
-        self.update_log.unlink()
-        self.update_dotfiles('--no-pull', '--mas')
-        self.assertEqual(self.update_log.read_text().splitlines(), ['install-dotfiles ', 'update-system --mas'])
+    def test_dots_role_host_link_and_path_entry(self):
+        self.updater_helpers(real_installer=True)
+        self.dots('role', 'server')
+        self.assertEqual(self.dots('role').stdout, 'server\n')
+        self.dots('host', 'marc3a')
+        self.assertEqual(self.dots('host').stdout, 'marc3a\n')
+        self.dots('host', 'default')
+        self.assertEqual(self.dots('host').stdout, 'default\n')
+        self.dots('role', 'nonsense', code=2)
+        self.assertTrue((self.home / '.local/bin/dots').samefile(self.repo / 'tools/dots'))
+        self.assertIn('ok: ' + str(self.home / '.local/bin/dots'), self.dots('link').stdout)
+
+    def test_dots_knows_every_tool_install_tools_accepts(self):
+        import re
+        installer = (self.repo / 'tools/install-tools').read_text()
+        accepted = re.search(r'case \$tool in ([a-z|-]+)\) ;;', installer).group(1).split('|')
+        dots = (self.repo / 'tools/dots').read_text()
+        known = re.search(r"known_tools='([^']+)'", dots).group(1).split()
+        self.assertEqual(sorted(accepted), sorted(known))
+        bash = (self.repo / 'bash/plugins/dots.sh').read_text()
+        self.assertEqual(re.search(r"local tools='([^']+)'", bash).group(1).split(), known)
+        fish = (self.repo / 'fish/completions/dots.fish').read_text()
+        self.assertEqual(re.search(r'set -l tools (.+)', fish).group(1).split(), known)
 
     def mock_package_managers(self):
-        """Mock every manager update-system looks for, so no real one can run."""
+        """Mock every manager update-packages looks for, so no real one can run."""
         self.system_log = self.root / 'system.log'
         self.env['SYSTEM_TEST_LOG'] = str(self.system_log)
         record = 'printf "%s\\n" "$(basename "$0") $*" >> "$SYSTEM_TEST_LOG"'
@@ -257,7 +300,7 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
 
     def test_system_update_runs_every_manager_and_continues_after_failures(self):
         self.mock_package_managers()
-        updater = str(self.repo / 'tools/update-system')
+        updater = str(self.repo / 'tools/update-packages')
         result = self.run_command([updater, '--check'])
         self.assertIn('Outdated: neovim @scope/tool', result.stdout)
         log = self.system_log.read_text().splitlines()
@@ -288,6 +331,24 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.run_command([updater, '--skip=brew,pixi', '--only', 'fisher,pixi'])
         self.assertEqual(self.system_log.read_text().splitlines(), ['fish -c functions -q fisher'])
         self.run_command([updater, '--only', 'nonsense'], code=2)
+
+    def test_system_update_on_servers_touches_only_home_local_stacks(self):
+        self.mock_package_managers()
+        self.env['DOTFILES_ROLE'] = 'server'
+        record = 'printf "%s\\n" "$(basename "$0") $*" >> "$SYSTEM_TEST_LOG"'
+        self.mock('brew', record + '; test "$1" != --prefix || echo /home/linuxbrew/.linuxbrew')
+        self.mock('npm', record + '; test "$1" != prefix || echo "$HOME/.npm-global"')
+        updater = str(self.repo / 'tools/update-packages')
+        result = self.run_command([updater, '--all'])
+        self.assertIn('Skipped on this server (not under ' + str(self.home) + '): brew mas os', result.stdout)
+        log = self.system_log.read_text().splitlines()
+        self.assertEqual([line for line in log if line.startswith(('brew', 'sudo', 'mas', 'apt', 'dnf'))],
+                         ['brew --prefix'])
+        for line in ['pixi global update', 'npm prefix --global', 'uv tool upgrade --all', 'rustup update']:
+            self.assertIn(line, log)
+        self.system_log.unlink()
+        self.run_command([updater, '--only', 'os,mas'])
+        self.assertFalse(self.system_log.exists())
 
     def test_install_idempotence_and_private_selection(self):
         self.install('--host', 'marc3a')
@@ -333,7 +394,7 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.install('--role', 'server')
         (self.home / '.config/dotfiles/local/role').write_text('unknown\n')
         self.run_command([str(self.repo / 'tools/install-tools'), '--check'], code=1)
-        self.update_dotfiles('--no-pull', '--check', code=1)
+        self.dots('outdated', code=1)
         self.assertFalse((self.home / '.local/share/dotfiles/tools').exists())
 
     def test_existing_files_preserved_and_backup(self):
@@ -446,7 +507,7 @@ esac''')
         self.run_command([str(self.repo / 'tools/setup-vscode')])
         self.assertFalse((self.home / '.config/Code').exists())
         self.updater_helpers()
-        self.update_dotfiles('--no-pull', '--all')
+        self.dots('update', '--no-pull', 'all')
         self.assertNotIn('setup-vscode', self.update_log.read_text())
 
     @unittest.skipUnless(GIT, 'Git unavailable')
@@ -576,7 +637,7 @@ esac''')
         self.assertTrue(binary.is_symlink())
         self.run_command([str(binary), '--version'])
         manifest.write_text('rg x86_64 ' + '0' * 64 + ' https://example.invalid/fixture.tar.gz\n')
-        result = self.run_command([str(self.repo / 'tools/update-tools'), 'rg'], code=1, extra=extra)
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'rg'], code=1, extra=extra)
         self.assertIn('Checksum mismatch', result.stderr)
         self.assertEqual(self.run_command([str(binary), '--version']).stdout.strip(), 'test ripgrep')
         self.assertFalse(list((self.home / '.local/share/dotfiles/tools').glob('.install-*')))
@@ -590,7 +651,7 @@ esac''')
         self.assertIn('bundle --no-upgrade --file=', log.read_text())
         self.run_command([str(self.repo / 'tools/install-tools'), 'rg'], extra=extra)
         self.assertNotIn('install ripgrep', log.read_text())
-        self.run_command([str(self.repo / 'tools/update-tools'), 'rg'], extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'rg'], extra=extra)
         self.assertIn('upgrade --formula ripgrep', log.read_text())
         self.run_command([str(self.repo / 'tools/install-tools'), 'btop'], extra=extra)
         self.assertIn('list --formula btop', log.read_text())
@@ -609,7 +670,7 @@ esac''')
         self.assertIn('bundle --no-upgrade --file=' + str(self.repo / 'brew/editor.Brewfile'), result.stdout)
 
     def test_agents_profile_scope_and_macos_casks(self):
-        result = self.run_command([str(self.repo / 'tools/update-tools'), '--agents', '--check'])
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--agents', '--check'])
         self.assertIn('codex', result.stdout)
         self.assertIn('claude', result.stdout)
         for tool in ['pixi', 'nvim', 'tinymist', 'typst']:
@@ -620,7 +681,7 @@ esac''')
         self.mock('brew', 'printf "%s\\n" "$*"')
         result = self.run_command([str(self.repo / 'tools/install-tools'), '--agents'])
         self.assertIn('/brew/agents.Brewfile', result.stdout)
-        result = self.run_command([str(self.repo / 'tools/update-tools'), 'claude', 'codex'])
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'claude', 'codex'])
         self.assertIn('upgrade --cask claude-code', result.stdout)
         self.assertIn('upgrade --cask codex', result.stdout)
 
@@ -667,10 +728,10 @@ exit 8''')
         self.assertIn('--path ', log.read_text())
         self.assertIn('tree-sitter-cli-0.27.2-test_0.conda', log.read_text())
         self.assertIn('0.27.2', self.run_command([str(binary), '--version']).stdout)
-        self.assertIn('0.27.2', self.run_command([str(self.repo / 'tools/update-tools'), '--check', 'tree-sitter']).stdout)
+        self.assertIn('0.27.2', self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--check', 'tree-sitter']).stdout)
 
         pin('0.28.0')
-        self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], code=1,
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'tree-sitter'], code=1,
                          extra=dict(extra, PIXI_TEST_FAIL='1'))
         self.assertTrue(old_home.is_dir())
         self.assertEqual(list(store.glob('.tree-sitter.*')), [old_home])
@@ -678,11 +739,11 @@ exit 8''')
         # Verification fails before Pixi sees the package or any launcher moves.
         prior_log = log.read_text()
         manifest.write_text(manifest.read_text().replace(hashlib.sha256(archive.read_bytes()).hexdigest(), '0' * 64))
-        result = self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], code=1, extra=extra)
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'tree-sitter'], code=1, extra=extra)
         self.assertIn('Checksum mismatch', result.stderr)
         self.assertEqual(log.read_text(), prior_log)
         pin('0.28.0')
-        self.run_command([str(self.repo / 'tools/update-tools'), 'tree-sitter'], extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'tree-sitter'], extra=extra)
         self.assertFalse(old_home.exists())
         self.assertEqual(len(list(store.glob('.tree-sitter.*'))), 1)
         self.assertIn('0.28.0', self.run_command([str(binary), '--version']).stdout)
@@ -705,7 +766,7 @@ exit 8''')
         self.assertTrue((store / 'codex-resources/bwrap').is_file())
         (store / 'bin/codex').write_text('#!/bin/sh\necho "codex 99.0.0"\n')
         (store / '.dotfiles-managed').write_text('previous pin')
-        result = self.run_command([str(self.repo / 'tools/update-tools'), 'codex'], extra=extra)
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'codex'], extra=extra)
         self.assertIn('newer-than-pin', result.stdout)
 
     def test_claude_launcher_keeps_updates_managed(self):
@@ -717,7 +778,7 @@ exit 8''')
         self.run_command([str(self.repo / 'tools/install-tools'), 'claude'], extra=extra)
         result = self.run_command([str(self.home / '.local/bin/claude'), '--version'])
         self.assertIn('updater=1', result.stdout)
-        self.assertIn('current:', self.run_command([str(self.repo / 'tools/update-tools'), 'claude'], extra=extra).stdout)
+        self.assertIn('current:', self.run_command([str(self.repo / 'tools/install-tools'), '--update', 'claude'], extra=extra).stdout)
 
     def test_verified_raw_zip_xz_editor_downloads(self):
         manifest = self.repo / 'tools/linux-releases.txt'
@@ -804,10 +865,10 @@ exit 8''')
             originals[tool] = self.user_tool(tool, '.pixi/bin' if tool == 'pixi' else '.local/bin')
         self.mock('curl', 'echo UNEXPECTED_DOWNLOAD >&2; exit 9')
         before = set(self.home.rglob('*'))
-        result = self.run_command([str(self.repo / 'tools/update-tools'), '--check', '--adopt-all'], extra=extra)
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--check', '--adopt-all'], extra=extra)
         self.assertEqual(set(self.home.rglob('*')), before)
         self.assertEqual(result.stdout.count('user'), 10)
-        self.run_command([str(self.repo / 'tools/update-tools'), '--adopt-all'], extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt-all'], extra=extra)
         for tool, original in originals.items():
             self.assertTrue(original.is_symlink())
             self.assertIn('2.0.0', self.run_command([str(original), '--version']).stdout)
@@ -818,7 +879,7 @@ exit 8''')
         # No archive/network access is necessary at an unchanged pin.
         for path in self.root.glob('*-x86_64.tar.gz'):
             path.unlink()
-        repeated = self.run_command([str(self.repo / 'tools/update-tools'), '--adopt-all'])
+        repeated = self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt-all'])
         self.assertEqual(repeated.stdout.count('current:'), 10)
         self.assertEqual(len(list((self.home / '.local/state/dotfiles/tool-backups').glob('*/*/active'))), 10)
 
@@ -830,21 +891,21 @@ exit 8''')
         bridge.symlink_to(module)
         self.env['PATH'] = str(bridge.parent) + ':' + self.env['PATH']
         self.mock('curl', 'echo UNEXPECTED_DOWNLOAD >&2; exit 9')
-        self.run_command([str(self.repo / 'tools/update-tools'), '--adopt', 'rg'])
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt', 'rg'])
         self.assertEqual(os.readlink(str(bridge)), str(module))
         module.unlink()
         bridge.unlink()
         newer = self.user_tool('rg', version='1.0.0')
         module.symlink_to(newer)
         self.env['PATH'] = str(self.bin) + ':/usr/bin:/bin'
-        preview = self.run_command([str(self.repo / 'tools/update-tools'), '--check', '--adopt', 'rg'])
+        preview = self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--check', '--adopt', 'rg'])
         self.assertIn('protected', preview.stdout)
-        self.run_command([str(self.repo / 'tools/update-tools'), '--adopt', 'rg'])
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt', 'rg'])
         self.assertTrue(module.is_symlink())
         self.assertFalse(newer.is_symlink())
         module.unlink()
         newer.write_text('#!/bin/sh\necho "rg 99.0.0"\n')
-        result = self.run_command([str(self.repo / 'tools/update-tools'), '--adopt', 'rg'])
+        result = self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt', 'rg'])
         self.assertIn('newer-than-pin', result.stdout)
         self.assertFalse(newer.is_symlink())
         self.assertFalse((self.home / '.local/state').exists())
@@ -855,7 +916,7 @@ exit 8''')
         extra = self.release_fixture('rg')
         # Force a failure after the verified release and original backup exist.
         self.mock('mv', 'case "$1" in -f) echo simulated-publish-failure >&2; exit 7 ;; esac; exec /bin/mv "$@"')
-        self.run_command([str(self.repo / 'tools/update-tools'), '--adopt', 'rg'], code=1, extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt', 'rg'], code=1, extra=extra)
         self.assertFalse(original.is_symlink())
         self.assertIn('1.0.0', original.read_text())
         self.assertFalse((self.home / '.local/share/dotfiles/tools/rg').exists())
@@ -866,11 +927,11 @@ exit 8''')
         log = self.root / 'brew.log'
         self.mock('brew', 'printf "%s\\n" "$*" >> "$BREW_TEST_LOG"')
         extra = {'BREW_TEST_LOG': str(log)}
-        self.run_command([str(self.repo / 'tools/update-tools'), '--check'], extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--check'], extra=extra)
         self.assertIn('outdated --verbose', log.read_text())
         self.assertNotIn('upgrade', log.read_text())
         self.assertNotIn('update', log.read_text())
-        self.run_command([str(self.repo / 'tools/update-tools'), '--adopt-all'], code=2, extra=extra)
+        self.run_command([str(self.repo / 'tools/install-tools'), '--update', '--adopt-all'], code=2, extra=extra)
 
     @unittest.skipUnless(NVIM and GIT, 'Neovim/Git unavailable')
     def test_editor_fetches_new_pin_and_reuses_it_offline(self):

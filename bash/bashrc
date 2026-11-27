@@ -7,7 +7,7 @@ BASH_DATA_HOME="$XDG_DATA_HOME/bash"
 set -o vi
 
 # Shared interactive defaults, then platform/host/private overrides.
-for _plugin in options history editor aliases pixi browse; do
+for _plugin in options history editor aliases pixi browse dots; do
     source "$XDG_CONFIG_HOME/bash/plugins/$_plugin.sh"
 done
 

@@ -39,7 +39,8 @@
 
 # Generated shell completions and version markers.
 /bash/completions/
-/fish/completions/
+/fish/completions/*
+!/fish/completions/dots.fish
 /pixi/version
 
 # Application state not intended as configuration.

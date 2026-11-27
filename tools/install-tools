@@ -74,7 +74,8 @@ if [ "$(uname -s)" = Darwin ]; then
         fi
         exec brew outdated --verbose "$@"
     fi
-    if [ "$update" = true ]; then brew update || exit; fi
+    # dots refreshes the index once per run and sets DOTFILES_BREW_UPDATED.
+    if [ "$update" = true ] && [ -z "${DOTFILES_BREW_UPDATED:-}" ]; then brew update || exit; fi
     if [ -z "$requested" ]; then
         if [ "$update" = true ]; then
             exec brew bundle --file="$repo_dir/brew/$profile.Brewfile"
@@ -323,7 +324,7 @@ install_one() (
     fi
     if [ "$tool" = claude ]; then
         mv "$tmp/ready/bin/claude" "$tmp/ready/bin/claude-native" || exit
-        # Keep this installation under update-tools instead of Claude's native
+        # Keep this installation under dots update instead of Claude's native
         # self-updater replacing its managed launcher behind our back.
         cat > "$tmp/ready/bin/claude" <<'CLAUDE_LAUNCHER'
 #!/bin/sh
