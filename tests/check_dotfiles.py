@@ -5,6 +5,7 @@ import gzip
 import io
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -276,7 +277,6 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertIn('Role: server', self.run_command([str(self.home / 'bin-dots'), 'status']).stdout)
 
     def test_dots_knows_every_tool_install_tools_accepts(self):
-        import re
         installer = (self.repo / 'tools/install-tools').read_text()
         accepted = re.search(r'case \$tool in ([a-z|-]+)\) ;;', installer).group(1).split('|')
         dots = (self.repo / 'tools/dots').read_text()
@@ -833,6 +833,47 @@ exit 8''')
         local.write_text("alias ls='printf private'\n")
         result = self.bash('source "$HOME/.bashrc"; alias ls', True)
         self.assertIn("printf private", result.stdout)
+
+    def test_replacement_aliases_prefer_better_tools(self):
+        self.install()
+        for tool in ['nvim', 'vim', 'htop', 'free', 'eza']:
+            self.mock(tool, 'exit 0')
+        listing = 'for name in vi vim top tree df du grep free rm; do alias "$name" 2>/dev/null || type -t "$name"; done'
+        result = self.bash('source "$HOME/.bashrc"; ' + listing, True).stdout
+        for line in ["alias vi='nvim'", "alias vim='nvim'", "alias top='htop'", "alias tree='ls --tree'",
+                     "alias df='df -h'", "alias free='free -h'", "alias grep='grep --color=auto'",
+                     "alias rm='rm -I'"]:
+            self.assertIn(line, result)
+        # Without Neovim, vi falls back to Vim and vim stays itself; btop beats htop.
+        (self.bin / 'nvim').unlink()
+        self.mock('btop', 'exit 0')
+        result = self.bash('source "$HOME/.bashrc"; ' + listing, True).stdout
+        self.assertIn("alias vi='vim'", result)
+        self.assertNotIn("alias vim=", result)
+        self.assertIn("alias top='btop'", result)
+
+    def test_macos_rm_moves_to_trash_with_rm_checks(self):
+        self.install()
+        self.mock('uname', 'echo Darwin')
+        log = self.root / 'trash.log'
+        self.mock('trash', 'printf "%s\\n" "$*" >> ' + shlex.quote(str(log)))
+        work = self.root / 'work'
+        (work / 'dir').mkdir(parents=True)
+        (work / 'file').write_text('x')
+        script = ('cd ' + shlex.quote(str(work)) + '; rm file; echo "=$?"; rm dir; echo "=$?"; '
+                  'rm -rf dir missing file; echo "=$?"; rm missing; echo "=$?"; rm -x file; echo "=$?"')
+        expected_codes = ['=0', '=1', '=0', '=1', '=2']
+        result = self.run_command(['/bin/bash', '--noprofile', '--norc', '-ic',
+                                   'source "$HOME/.bashrc"; ' + script])
+        self.assertEqual(re.findall(r'=\d', result.stdout), expected_codes)
+        self.assertIn('rm: dir: is a directory', result.stderr)
+        self.assertEqual(log.read_text().splitlines(), ['file', 'dir file'])
+        if FISH:
+            log.unlink()
+            os.symlink(str(self.repo / 'fish'), str(self.home / '.config/fish'))
+            result = self.run_command([FISH, '-i', '-c', script.replace('$?', '$status')])
+            self.assertEqual(re.findall(r'=\d', result.stdout), expected_codes)
+            self.assertEqual(log.read_text().splitlines(), ['file', 'dir file'])
 
     def release_fixture(self, tool, version='2.0.0'):
         archive = self.root / (tool + '-x86_64.tar.gz')

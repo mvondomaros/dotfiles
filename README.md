@@ -463,6 +463,13 @@ wrapping and spelling. English is bundled; the `editor` target downloads a
 checksum-verified German dictionary explicitly. `:checkhealth dotfiles` reports
 which shared tools are available and which installer profile supplies them.
 
+Interactive shells prefer better tools under familiar names when they exist:
+`vi` and `vim` open Neovim (or `vi` opens Vim without it), `top` opens btop (or
+htop), `tree` uses eza, and `df`, `du`, and `free` print human-readable sizes.
+On macOS, `rm` moves files to the Trash with `/usr/bin/trash` while keeping rm's
+usual flags and its checks for missing files and directories. `command NAME`
+always reaches the original, e.g. `command rm` to delete permanently or
+`command vim` for the Vim fallback; scripts and `$EDITOR` are unaffected.
 Missing eza leaves ordinary ls aliases, missing Atuin leaves Bash history, and
 missing Starship leaves the shell prompt. Pixi completions are generated only
 by the `tools` target, never by shell startup.
@@ -484,9 +491,9 @@ Pixi global; `dots update tools` also runs `pixi global update sjobs` when that
 environment is installed (`packages` updates it with every other Pixi global).
 
 Use `btop` for interactive resource monitoring on macOS; the CLI Homebrew profile
-installs it. Apple's privileged `top` cannot use Kitty's user terminfo, so
-dotfiles does not wrap or alias `top`. On servers, use the available resource
-monitor. If a remote host does not recognize `xterm-kitty`, connect with
+installs it, and `top` opens it. Apple's privileged `top` cannot use Kitty's user
+terminfo; `command top` still runs it. On servers, `top` opens htop when btop is
+missing. If a remote host does not recognize `xterm-kitty`, connect with
 `kitten ssh server` to install Kitty's terminfo automatically; a local replacement
 for `top` does not change the remote terminal database.
 
