@@ -30,8 +30,8 @@ myriad-dreamin.tinymist
 james-yu.latex-workshop
 mechatroner.rainbow-csv
 
-# Remote development: SSH, containers, and tunnels; no Windows-only WSL
-ms-vscode-remote.vscode-remote-extensionpack
+# Remote development: SSH, containers, and tunnels, listed instead of the
+# Remote Development pack (which adds Windows-only WSL)
 ms-vscode-remote.remote-ssh
 ms-vscode-remote.remote-ssh-edit
 ms-vscode.remote-explorer
