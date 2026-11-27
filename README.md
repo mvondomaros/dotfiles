@@ -599,8 +599,8 @@ that machine:
 ~/.config/tools/update-dotfiles
 ```
 
-`--all` selects CLI core, editor, agents, and workstation VS Code extensions
-together; `--backup` remains a separate choice for replacing conflicting
+`--all` selects CLI core, editor, agents, workstation VS Code extensions, and
+the user-level system package managers together; `--backup` remains a separate choice for replacing conflicting
 configuration entries with backups.
 The selected role determines whether Python and Typst belong to those profiles.
 The default updates Git and reapplies configuration links. Profiles are explicit
@@ -618,22 +618,26 @@ reported issue and rerun with `--no-pull` and the same profile flags. Private
 configuration and per-tool backup policies remain in the underlying installers.
 The updater runs only when invoked; shell and editor startup stay offline.
 
-Beyond this repository's tool set, `tools/update-system` upgrades everything
-the package managers on the machine know about: Homebrew formulae and casks,
-Mac App Store apps (`mas`, via sudo), all Pixi globals, global npm packages
-(except `npm`/`corepack`, which belong to Node), uv tools, pipx, rustup,
-`cargo install-update`, and fisher. Absent managers are skipped; a failing
-manager is reported and the rest still run. OS updates (`softwareupdate`, or
-apt/dnf on Linux) are only listed unless `--os` is given, and never restart.
+Beyond this repository's tool set, `tools/update-system` upgrades every
+package of the user-level package managers on the machine: Homebrew formulae
+and casks, all Pixi globals, global npm packages (except `npm`/`corepack`,
+which belong to Node), uv tools, pipx, rustup, `cargo install-update`, and
+fisher. Absent managers are skipped; a failing manager is reported and the rest
+still run. Upgrades run without confirmation prompts (`brew upgrade --yes`).
+The managers that need sudo are opt-in: `--mas` upgrades Mac App Store apps,
+`--os` installs OS updates (`softwareupdate`, or apt/dnf on Linux, with
+`--agree-to-license`, `--yes`, or `--assumeyes`; never restarting), and `--all`
+selects both.
 
 ```sh
-~/.config/tools/update-system --check          # list what would change
-~/.config/tools/update-system                  # upgrade everything found
-~/.config/tools/update-system --os --skip mas  # include OS updates
-~/.config/tools/update-dotfiles --all --system # dotfiles profiles, then everything
+~/.config/tools/update-system --check --all     # list what would change
+~/.config/tools/update-system                   # user-level managers only
+~/.config/tools/update-system --all             # also App Store and OS (sudo)
+~/.config/tools/update-dotfiles --all --mas --os # everything in one run
 ```
 
-`--system` is never implied by `--all`.
+In `update-dotfiles`, `--system` runs the user-level managers last, `--all`
+includes it, and `--mas`/`--os` are passed through (each implies `--system`).
 
 Verify changes locally with:
 

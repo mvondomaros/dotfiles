@@ -9,32 +9,36 @@ editor=false
 agents=false
 vscode=false
 system=false
+system_args=
 backup=false
 for option in "$@"; do
     case $option in
         --check) check=true ;;
         --no-pull) pull=false ;;
-        --all) tools=true; editor=true; agents=true; vscode=true ;;
+        --all) tools=true; editor=true; agents=true; vscode=true; system=true ;;
         --tools) tools=true ;;
         --editor) editor=true ;;
         --agents) agents=true ;;
         --vscode) vscode=true ;;
         --system) system=true ;;
+        --mas|--os) system=true; system_args="$system_args $option" ;;
         --backup) backup=true ;;
         --help)
             cat <<'HELP'
-Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents --vscode] [--system] [--backup]
+Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents --vscode --system] [--mas] [--os] [--backup]
 
 Default: fast-forward the current branch from its upstream and reapply config links.
   --check    Fetch and show incoming commits and selected steps, without applying them.
   --no-pull  Apply the current checkout; also works with uncommitted local changes.
-  --all      Select --tools, --editor, --agents, and --vscode together.
+  --all      Select --tools, --editor, --agents, --vscode, and --system together.
   --tools    Update CLI core tools and regenerate cached shell completions.
   --editor   Update Neovim/editor tools and restore pinned plugins, parsers, spelling.
   --agents   Update Codex CLI and Claude Code.
   --vscode   Update declared VS Code extensions and reapply settings (workstations).
-  --system   Afterwards, upgrade everything every package manager here knows about
-             (tools/update-system; see its --help). Not part of --all.
+  --system   Afterwards, upgrade every package of the user-level package managers
+             found (tools/update-system; see its --help).
+  --mas      Also upgrade Mac App Store apps (sudo); implies --system.
+  --os       Also install OS updates (sudo, no restart); implies --system.
   --backup   Preserve and replace conflicting configuration files or old links.
 
 Use --editor for machines with the full Neovim setup. Profiles are explicit per run.
@@ -96,6 +100,8 @@ if [ "$pull" = true ]; then
         [ "$agents" = false ] || set -- "$@" --agents
         [ "$vscode" = false ] || set -- "$@" --vscode
         [ "$system" = false ] || set -- "$@" --system
+        # shellcheck disable=SC2086
+        set -- "$@" $system_args
         [ "$backup" = false ] || set -- "$@" --backup
         exec "$repo_dir/tools/update-dotfiles" "$@"
     fi
@@ -107,7 +113,7 @@ printf 'Plan: reapply configuration links%s.\n' "$([ "$backup" = false ] || prin
 if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
     printf 'Plan: update declared VS Code extensions and reapply settings.\n'
 fi
-[ "$system" = false ] || printf 'Plan: upgrade all packages of every package manager found.\n'
+[ "$system" = false ] || printf 'Plan: upgrade all packages of the package managers found%s.\n' "${system_args:+ (with$system_args)}"
 if [ "$check" = true ]; then
     printf 'Check complete; no configuration, package, or plugin changes applied.\n'
     exit 0
@@ -135,5 +141,6 @@ if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
     [ "$backup" = false ] || set -- "$@" --backup
     "$repo_dir/tools/setup-vscode" "$@"
 fi
-if [ "$system" = true ]; then "$repo_dir/tools/update-system"; fi
+# shellcheck disable=SC2086
+if [ "$system" = true ]; then "$repo_dir/tools/update-system" $system_args; fi
 printf 'Requested update steps finished. Restart shells and editors to load the changes.\n'

@@ -125,7 +125,8 @@ class DotfilesTests(unittest.TestCase):
         self.assertEqual(self.run_command([GIT, '-C', str(self.repo), 'rev-parse', 'HEAD']).stdout.strip(), released)
         self.assertEqual(self.update_log.read_text().splitlines(), [
             'new-updater', 'update-tools ', 'update-tools --editor', 'update-tools --agents',
-            'setup-shell ', 'setup-editor --parsers --spell', 'setup-vscode --update --backup'])
+            'setup-shell ', 'setup-editor --parsers --spell', 'setup-vscode --update --backup',
+            'update-system '])
         self.assertFalse(git_dir.is_symlink())
         self.assertTrue((git_dir / 'config').is_symlink())
         self.assertEqual(self.run_command([GIT, 'config', '--file', str(git_dir / 'config'),
@@ -220,7 +221,7 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertEqual(self.update_log.read_text().splitlines(), [
             'update-tools ', 'update-tools --editor', 'update-tools --agents',
             'install-dotfiles --backup', 'setup-shell ', 'setup-editor --parsers --spell',
-            'setup-vscode --update --backup'])
+            'setup-vscode --update --backup', 'update-system '])
         self.update_log.unlink()
         helper = self.repo / 'tools/update-tools'
         helper.write_text(helper.read_text() + 'test "$*" != --editor || exit 9\n')
@@ -228,15 +229,16 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertEqual(self.update_log.read_text().splitlines(), ['update-tools ', 'update-tools --editor'])
         self.update_dotfiles('--nonsense', code=2)
 
-    def test_system_update_is_opt_in_and_passed_through(self):
+    def test_system_update_sudo_managers_are_opt_in_and_passed_through(self):
         self.updater_helpers()
-        self.update_dotfiles('--no-pull', '--all')
-        self.assertNotIn('update-system', self.update_log.read_text())
-        self.update_log.unlink()
-        self.update_dotfiles('--no-pull', '--check', '--system')
+        result = self.update_dotfiles('--no-pull', '--check', '--os', '--mas')
+        self.assertIn('package managers found (with --os --mas).', result.stdout)
         self.assertFalse(self.update_log.exists())
         self.update_dotfiles('--no-pull', '--system')
         self.assertEqual(self.update_log.read_text().splitlines(), ['install-dotfiles ', 'update-system '])
+        self.update_log.unlink()
+        self.update_dotfiles('--no-pull', '--mas')
+        self.assertEqual(self.update_log.read_text().splitlines(), ['install-dotfiles ', 'update-system --mas'])
 
     def mock_package_managers(self):
         """Mock every manager update-system looks for, so no real one can run."""
@@ -260,24 +262,28 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.assertIn('Outdated: neovim @scope/tool', result.stdout)
         log = self.system_log.read_text().splitlines()
         self.assertEqual([line for line in log if not line.startswith(('npm', 'fish'))], [
-            'brew update', 'brew outdated --verbose', 'mas outdated', 'uv tool list --outdated',
-            'rustup check', 'cargo install-update --list', 'apt list --upgradable'])
+            'brew update', 'brew outdated --verbose', 'uv tool list --outdated',
+            'rustup check', 'cargo install-update --list'])
+        self.system_log.unlink()
+        self.run_command([updater, '--check', '--all', '--only', 'mas,os'])
+        self.assertEqual(self.system_log.read_text().splitlines(), ['mas outdated', 'apt list --upgradable'])
         self.system_log.unlink()
         self.mock('pixi', 'exit 7')
         result = self.run_command([updater], code=1)
         self.assertIn('Failed: pixi', result.stderr)
         log = self.system_log.read_text().splitlines()
-        for line in ['brew upgrade', 'sudo mas upgrade', 'npm install --global neovim@latest @scope/tool@latest',
+        for line in ['brew upgrade --yes', 'npm install --global neovim@latest @scope/tool@latest',
                      'uv tool upgrade --all', 'pipx upgrade-all', 'rustup update', 'cargo install-update --all']:
             self.assertIn(line, log)
         self.assertNotIn('fish -c fisher update', log)
-        self.assertFalse(any(line.startswith(('sudo apt-get', 'apt-get')) for line in log))
+        self.assertFalse(any(line.startswith(('sudo', 'mas', 'apt')) for line in log))
         self.system_log.unlink()
-        result = self.run_command([updater, '--only', 'os'])
-        self.assertIn('rerun with --os', result.stdout)
+        self.run_command([updater, '--all', '--skip', 'brew,pixi,npm,uv,pipx,rustup,cargo,fisher'])
+        self.assertEqual(self.system_log.read_text().splitlines(), [
+            'sudo mas upgrade', 'sudo apt-get update', 'sudo apt-get upgrade --yes'])
         self.system_log.unlink()
-        self.run_command([updater, '--only', 'os', '--os'])
-        self.assertEqual(self.system_log.read_text().splitlines(), ['sudo apt-get update', 'sudo apt-get upgrade'])
+        self.run_command([updater, '--os', '--skip', 'brew,pixi,npm,uv,pipx,rustup,cargo,fisher'])
+        self.assertEqual(self.system_log.read_text().splitlines(), ['sudo apt-get update', 'sudo apt-get upgrade --yes'])
         self.system_log.unlink()
         self.run_command([updater, '--skip=brew,pixi', '--only', 'fisher,pixi'])
         self.assertEqual(self.system_log.read_text().splitlines(), ['fish -c functions -q fisher'])
