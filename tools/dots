@@ -2,7 +2,13 @@
 # Single entry point for this checkout: dots COMMAND [TARGET...] [--modifier].
 # The other scripts in tools/ are internal steps that dots runs.
 set -u
-repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+# Usually run through the ~/.local/bin/dots link; follow it to the checkout.
+self=$0
+while [ -L "$self" ]; do
+    target=$(readlink -- "$self")
+    case $target in /*) self=$target ;; *) self=$(dirname -- "$self")/$target ;; esac
+done
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
 tools_dir=$repo_dir/tools
 local_dir=${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/local
 targets_file=$local_dir/targets

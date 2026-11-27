@@ -270,6 +270,10 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.dots('role', 'nonsense', code=2)
         self.assertTrue((self.home / '.local/bin/dots').samefile(self.repo / 'tools/dots'))
         self.assertIn('ok: ' + str(self.home / '.local/bin/dots'), self.dots('link').stdout)
+        # Run through the PATH link, including a relative link one level further.
+        self.assertIn('Checkout: ' + str(self.repo), self.run_command([str(self.home / '.local/bin/dots'), 'status']).stdout)
+        os.symlink('.local/bin/dots', str(self.home / 'bin-dots'))
+        self.assertIn('Role: server', self.run_command([str(self.home / 'bin-dots'), 'status']).stdout)
 
     def test_dots_knows_every_tool_install_tools_accepts(self):
         import re
