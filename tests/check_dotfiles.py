@@ -62,7 +62,7 @@ class DotfilesTests(unittest.TestCase):
     def updater_helpers(self, real_installer=False):
         self.update_log = self.root / 'update.log'
         self.env['DOTFILES_UPDATE_LOG'] = str(self.update_log)
-        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor', 'setup-vscode']:
+        for name in ['update-tools', 'install-dotfiles', 'setup-shell', 'setup-editor', 'setup-vscode', 'update-system']:
             if name == 'install-dotfiles' and real_installer:
                 continue
             helper = self.repo / 'tools' / name
@@ -227,6 +227,61 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
         self.update_dotfiles('--no-pull', '--tools', '--editor', '--agents', code=9)
         self.assertEqual(self.update_log.read_text().splitlines(), ['update-tools ', 'update-tools --editor'])
         self.update_dotfiles('--nonsense', code=2)
+
+    def test_system_update_is_opt_in_and_passed_through(self):
+        self.updater_helpers()
+        self.update_dotfiles('--no-pull', '--all')
+        self.assertNotIn('update-system', self.update_log.read_text())
+        self.update_log.unlink()
+        self.update_dotfiles('--no-pull', '--check', '--system')
+        self.assertFalse(self.update_log.exists())
+        self.update_dotfiles('--no-pull', '--system')
+        self.assertEqual(self.update_log.read_text().splitlines(), ['install-dotfiles ', 'update-system '])
+
+    def mock_package_managers(self):
+        """Mock every manager update-system looks for, so no real one can run."""
+        self.system_log = self.root / 'system.log'
+        self.env['SYSTEM_TEST_LOG'] = str(self.system_log)
+        record = 'printf "%s\\n" "$(basename "$0") $*" >> "$SYSTEM_TEST_LOG"'
+        for name in ['brew', 'mas', 'pixi', 'uv', 'pipx', 'rustup', 'cargo', 'cargo-install-update',
+                     'sudo', 'apt-get', 'apt', 'dnf']:
+            self.mock(name, record)
+        self.mock('fish', record + '; test "$2" != "functions -q fisher" || exit 1')
+        outdated = ['/p/lib/node_modules/neovim:neovim@5.5.0:neovim@5.1.0:neovim@5.5.0:global',
+                    '/p/lib/node_modules/npm:npm@12:npm@11:npm@12:global',
+                    '/p/lib/node_modules/@scope/tool:@scope/tool@2:@scope/tool@1:@scope/tool@2:global']
+        self.mock('npm', record + '\nif [ "$1" = outdated ]; then printf "%s\\n" '
+                  + ' '.join(outdated) + '; exit 1; fi')
+
+    def test_system_update_runs_every_manager_and_continues_after_failures(self):
+        self.mock_package_managers()
+        updater = str(self.repo / 'tools/update-system')
+        result = self.run_command([updater, '--check'])
+        self.assertIn('Outdated: neovim @scope/tool', result.stdout)
+        log = self.system_log.read_text().splitlines()
+        self.assertEqual([line for line in log if not line.startswith(('npm', 'fish'))], [
+            'brew update', 'brew outdated --verbose', 'mas outdated', 'uv tool list --outdated',
+            'rustup check', 'cargo install-update --list', 'apt list --upgradable'])
+        self.system_log.unlink()
+        self.mock('pixi', 'exit 7')
+        result = self.run_command([updater], code=1)
+        self.assertIn('Failed: pixi', result.stderr)
+        log = self.system_log.read_text().splitlines()
+        for line in ['brew upgrade', 'sudo mas upgrade', 'npm install --global neovim@latest @scope/tool@latest',
+                     'uv tool upgrade --all', 'pipx upgrade-all', 'rustup update', 'cargo install-update --all']:
+            self.assertIn(line, log)
+        self.assertNotIn('fish -c fisher update', log)
+        self.assertFalse(any(line.startswith(('sudo apt-get', 'apt-get')) for line in log))
+        self.system_log.unlink()
+        result = self.run_command([updater, '--only', 'os'])
+        self.assertIn('rerun with --os', result.stdout)
+        self.system_log.unlink()
+        self.run_command([updater, '--only', 'os', '--os'])
+        self.assertEqual(self.system_log.read_text().splitlines(), ['sudo apt-get update', 'sudo apt-get upgrade'])
+        self.system_log.unlink()
+        self.run_command([updater, '--skip=brew,pixi', '--only', 'fisher,pixi'])
+        self.assertEqual(self.system_log.read_text().splitlines(), ['fish -c functions -q fisher'])
+        self.run_command([updater, '--only', 'nonsense'], code=2)
 
     def test_install_idempotence_and_private_selection(self):
         self.install('--host', 'marc3a')

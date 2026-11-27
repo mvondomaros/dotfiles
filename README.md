@@ -618,6 +618,23 @@ reported issue and rerun with `--no-pull` and the same profile flags. Private
 configuration and per-tool backup policies remain in the underlying installers.
 The updater runs only when invoked; shell and editor startup stay offline.
 
+Beyond this repository's tool set, `tools/update-system` upgrades everything
+the package managers on the machine know about: Homebrew formulae and casks,
+Mac App Store apps (`mas`, via sudo), all Pixi globals, global npm packages
+(except `npm`/`corepack`, which belong to Node), uv tools, pipx, rustup,
+`cargo install-update`, and fisher. Absent managers are skipped; a failing
+manager is reported and the rest still run. OS updates (`softwareupdate`, or
+apt/dnf on Linux) are only listed unless `--os` is given, and never restart.
+
+```sh
+~/.config/tools/update-system --check          # list what would change
+~/.config/tools/update-system                  # upgrade everything found
+~/.config/tools/update-system --os --skip mas  # include OS updates
+~/.config/tools/update-dotfiles --all --system # dotfiles profiles, then everything
+```
+
+`--system` is never implied by `--all`.
+
 Verify changes locally with:
 
 ```sh

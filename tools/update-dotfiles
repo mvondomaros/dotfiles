@@ -8,6 +8,7 @@ tools=false
 editor=false
 agents=false
 vscode=false
+system=false
 backup=false
 for option in "$@"; do
     case $option in
@@ -18,10 +19,11 @@ for option in "$@"; do
         --editor) editor=true ;;
         --agents) agents=true ;;
         --vscode) vscode=true ;;
+        --system) system=true ;;
         --backup) backup=true ;;
         --help)
             cat <<'HELP'
-Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents --vscode] [--backup]
+Usage: update-dotfiles [--check] [--no-pull] [--all | --tools --editor --agents --vscode] [--system] [--backup]
 
 Default: fast-forward the current branch from its upstream and reapply config links.
   --check    Fetch and show incoming commits and selected steps, without applying them.
@@ -31,6 +33,8 @@ Default: fast-forward the current branch from its upstream and reapply config li
   --editor   Update Neovim/editor tools and restore pinned plugins, parsers, spelling.
   --agents   Update Codex CLI and Claude Code.
   --vscode   Update declared VS Code extensions and reapply settings (workstations).
+  --system   Afterwards, upgrade everything every package manager here knows about
+             (tools/update-system; see its --help). Not part of --all.
   --backup   Preserve and replace conflicting configuration files or old links.
 
 Use --editor for machines with the full Neovim setup. Profiles are explicit per run.
@@ -91,6 +95,7 @@ if [ "$pull" = true ]; then
         [ "$editor" = false ] || set -- "$@" --editor
         [ "$agents" = false ] || set -- "$@" --agents
         [ "$vscode" = false ] || set -- "$@" --vscode
+        [ "$system" = false ] || set -- "$@" --system
         [ "$backup" = false ] || set -- "$@" --backup
         exec "$repo_dir/tools/update-dotfiles" "$@"
     fi
@@ -102,6 +107,7 @@ printf 'Plan: reapply configuration links%s.\n' "$([ "$backup" = false ] || prin
 if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
     printf 'Plan: update declared VS Code extensions and reapply settings.\n'
 fi
+[ "$system" = false ] || printf 'Plan: upgrade all packages of every package manager found.\n'
 if [ "$check" = true ]; then
     printf 'Check complete; no configuration, package, or plugin changes applied.\n'
     exit 0
@@ -129,4 +135,5 @@ if [ "$vscode" = true ] && [ "$DOTFILES_ROLE" = workstation ]; then
     [ "$backup" = false ] || set -- "$@" --backup
     "$repo_dir/tools/setup-vscode" "$@"
 fi
+if [ "$system" = true ]; then "$repo_dir/tools/update-system"; fi
 printf 'Requested update steps finished. Restart shells and editors to load the changes.\n'

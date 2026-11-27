@@ -1,0 +1,165 @@
+#!/bin/sh
+# Update everything that package managers present on this machine know about,
+# beyond the tool set this repository declares. Each manager runs independently;
+# a failure is reported and the remaining managers still run.
+set -u
+check=false
+os=false
+only=
+skip=
+managers='brew mas pixi npm uv pipx rustup cargo fisher os'
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        --check) check=true ;;
+        --os) os=true ;;
+        --only) shift; only=${1:-} ;;
+        --only=*) only=${1#--only=} ;;
+        --skip) shift; skip=${1:-} ;;
+        --skip=*) skip=${1#--skip=} ;;
+        --help)
+            cat <<HELP
+Usage: update-system [--check] [--os] [--only LIST] [--skip LIST]
+
+Upgrade every package of each manager found on this machine:
+  brew    Homebrew formulae and casks (brew update, brew upgrade)
+  mas     Mac App Store apps (needs sudo)
+  pixi    all Pixi global environments
+  npm     global npm packages, except npm and corepack (owned by Node)
+  uv      uv tools
+  pipx    pipx packages
+  rustup  Rust toolchains
+  cargo   cargo-installed binaries (requires cargo-install-update)
+  fisher  fish plugins
+  os      macOS softwareupdate, or apt/dnf on Linux (listed; installed with --os)
+
+  --check  List available updates where the manager supports it; install nothing.
+           Homebrew still refreshes its package index.
+  --os     Install operating-system updates (needs sudo; never restarts).
+  --only   Comma-separated managers to run, e.g. --only brew,pixi.
+  --skip   Comma-separated managers to leave alone.
+
+Managers: $managers
+HELP
+            exit 0 ;;
+        *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
+    esac
+    shift
+done
+for name in $(printf '%s' "$only,$skip" | tr ',' ' '); do
+    case " $managers " in *" $name "*) ;; *) printf 'Unknown manager: %s\n' "$name" >&2; exit 2 ;; esac
+done
+for dir in "$HOME/.local/bin" "$HOME/.pixi/bin" "$HOME/.cargo/bin" /opt/homebrew/bin /usr/local/bin; do
+    case :$PATH: in *:"$dir":*) ;; *) [ ! -d "$dir" ] || PATH="$PATH:$dir" ;; esac
+done
+export PATH
+has() { command -v "$1" >/dev/null 2>&1; }
+selected() {
+    case ",$skip," in *",$1,"*) return 1 ;; esac
+    [ -z "$only" ] || case ",$only," in *",$1,"*) ;; *) return 1 ;; esac
+}
+ran=
+failed=
+step() {
+    name=$1; shift
+    printf '\n==> %s\n' "$name"
+    if "$@"; then ran="$ran $name"; else failed="$failed $name"; fi
+}
+
+do_brew() {
+    HOMEBREW_NO_AUTO_UPDATE=1; export HOMEBREW_NO_AUTO_UPDATE
+    brew update || return
+    if [ "$check" = true ]; then
+        brew outdated --verbose || true
+    else
+        brew upgrade
+    fi
+}
+do_mas() {
+    if [ "$check" = true ]; then mas outdated; else sudo mas upgrade; fi
+}
+do_pixi() {
+    if [ "$check" = true ]; then
+        printf 'pixi cannot preview global updates; would run: pixi global update\n'
+    else
+        pixi global update
+    fi
+}
+do_npm() {
+    # npm outdated exits 1 when anything is outdated; only its output matters.
+    outdated=$(npm outdated --global --parseable 2>/dev/null) || true
+    packages=$(printf '%s\n' "$outdated" | sed -n 's|^.*/node_modules/\([^:]*\):.*|\1|p' | grep -vx 'npm\|corepack')
+    if [ -z "$packages" ]; then printf 'All global npm packages are current.\n'; return 0; fi
+    # Package names contain no whitespace or glob characters.
+    # shellcheck disable=SC2086
+    set -- $packages
+    if [ "$check" = true ]; then printf 'Outdated: %s\n' "$*"; return 0; fi
+    for package; do set -- "$@" "$package@latest"; shift; done
+    npm install --global "$@"
+}
+do_uv() {
+    if [ "$check" = true ]; then uv tool list --outdated; else uv tool upgrade --all; fi
+}
+do_pipx() {
+    if [ "$check" = true ]; then
+        printf 'pipx cannot preview updates; would run: pipx upgrade-all\n'
+    else
+        pipx upgrade-all
+    fi
+}
+do_rustup() {
+    if [ "$check" = true ]; then rustup check; else rustup update; fi
+}
+do_cargo() {
+    if [ "$check" = true ]; then cargo install-update --list; else cargo install-update --all; fi
+}
+do_fisher() {
+    if [ "$check" = true ]; then
+        printf 'fisher cannot preview updates; would run: fisher update\n'
+    else
+        fish -c 'fisher update'
+    fi
+}
+do_os() {
+    if [ "$(uname -s)" = Darwin ]; then
+        if [ "$os" = true ] && [ "$check" = false ]; then
+            sudo softwareupdate --install --all
+        else
+            softwareupdate --list
+        fi
+    elif has apt-get; then
+        if [ "$os" = true ] && [ "$check" = false ]; then
+            sudo apt-get update && sudo apt-get upgrade
+        else
+            apt list --upgradable 2>/dev/null
+        fi
+    elif has dnf; then
+        if [ "$os" = true ] && [ "$check" = false ]; then
+            sudo dnf upgrade
+        else
+            dnf check-update
+            # Exit status 100 only means updates are available.
+            [ "$?" -ne 1 ]
+        fi
+    else
+        printf 'No supported OS package manager.\n'
+    fi
+}
+
+selected brew && has brew && step brew do_brew
+selected mas && has mas && step mas do_mas
+selected pixi && has pixi && step pixi do_pixi
+selected npm && has npm && step npm do_npm
+selected uv && has uv && step uv do_uv
+selected pipx && has pipx && step pipx do_pipx
+selected rustup && has rustup && step rustup do_rustup
+selected cargo && has cargo-install-update && step cargo do_cargo
+selected fisher && has fish && fish -c 'functions -q fisher' 2>/dev/null && step fisher do_fisher
+selected os && step os do_os
+
+printf '\nDone:%s\n' "${ran:- nothing}"
+if [ -n "$failed" ]; then
+    printf 'Failed:%s\n' "$failed" >&2
+    exit 1
+fi
+[ "$os" = true ] || [ "$check" = true ] || ! selected os || \
+    printf 'OS updates were only listed; rerun with --os to install them.\n'
