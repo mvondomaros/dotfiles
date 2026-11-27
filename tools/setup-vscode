@@ -45,10 +45,13 @@ for tool in $tools; do
     if command -v "$tool" >/dev/null 2>&1; then
         printf 'tool: %s (%s)\n' "$tool" "$(command -v "$tool")"
     else
-        printf 'missing tool: %s (run tools/install-tools and tools/install-tools --editor)\n' "$tool" >&2
+        printf 'missing tool: %s (run dots install tools editor)\n' "$tool" >&2
         missing=true
     fi
 done
+# The CLI's Node runtime warns about its own url.parse() use on every launch.
+NODE_NO_WARNINGS=1
+export NODE_NO_WARNINGS
 installed=$("$code_cli" --list-extensions)
 installed=$(printf '%s\n' "$installed" | tr '[:upper:]' '[:lower:]')
 extensions=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$repo_dir/vscode/extensions.txt")
@@ -77,7 +80,7 @@ if [ "$check" = true ]; then
         if [ -L "$target" ] && [ "$target" -ef "$repo_dir/vscode/$entry" ]; then
             printf 'config: %s\n' "$target"
         else
-            printf 'unmanaged config: %s (run tools/setup-vscode --backup)\n' "$target" >&2
+            printf 'unmanaged config: %s (run dots link --backup)\n' "$target" >&2
             missing=true
         fi
     done
@@ -85,15 +88,20 @@ if [ "$check" = true ]; then
     exit
 fi
 if [ "$missing" = true ]; then exit 1; fi
+# One CLI launch for all extensions; each launch costs about half a second.
+set --
 for extension in $extensions; do
-    # Every wanted companion is in the manifest. In particular, the Python
-    # extension must not bring Pylance back during installation or updates.
-    if [ "$update" = true ]; then
-        "$code_cli" --install-extension "$extension" --do-not-include-pack-dependencies --force
-    elif ! printf '%s\n' "$installed" | grep -Fqx "$(printf '%s' "$extension" | tr '[:upper:]' '[:lower:]')"; then
-        "$code_cli" --install-extension "$extension" --do-not-include-pack-dependencies
+    if [ "$update" = true ] || \
+        ! printf '%s\n' "$installed" | grep -Fqx "$(printf '%s' "$extension" | tr '[:upper:]' '[:lower:]')"; then
+        set -- "$@" --install-extension "$extension"
     fi
 done
+if [ "$#" -gt 0 ]; then
+    # Every wanted companion is in the manifest. In particular, the Python
+    # extension must not bring Pylance back during installation or updates.
+    [ "$update" = false ] || set -- "$@" --force
+    "$code_cli" "$@" --do-not-include-pack-dependencies
+fi
 set -- --vscode
 if [ "$backup" = true ]; then set -- "$@" --backup; fi
 "$repo_dir/tools/install-dotfiles" "$@"

@@ -453,13 +453,16 @@ exec ''' + shlex.quote(GIT) + ''' "$@"''')
 case "$1" in
     --list-extensions) cat "$CODE_EXTENSIONS" ;;
     --install-extension)
-        printf '%s\\n' "$2" >> "$CODE_EXTENSIONS"
-        if [ "$2" = ms-python.python ]; then
-            case " $* " in
-                *' --do-not-include-pack-dependencies '*) ;;
-                *) printf '%s\\n' ms-python.vscode-pylance >> "$CODE_EXTENSIONS" ;;
-            esac
-        fi ;;
+        while [ "$1" = --install-extension ]; do
+            printf '%s\\n' "$2" >> "$CODE_EXTENSIONS"
+            if [ "$2" = ms-python.python ]; then
+                case " $* " in
+                    *' --do-not-include-pack-dependencies '*) ;;
+                    *) printf '%s\\n' ms-python.vscode-pylance >> "$CODE_EXTENSIONS" ;;
+                esac
+            fi
+            shift 2
+        done ;;
 esac''')
         for tool in ['pixi', 'ruff', 'ty', 'tinymist', 'shfmt', 'shellcheck', 'stylua']:
             self.mock(tool, 'exit 0')
@@ -470,10 +473,10 @@ esac''')
         log.write_text('')
         self.run_command(setup)
         calls = log.read_text().splitlines()
-        self.assertEqual(calls, ['--list-extensions'] + [
-            '--install-extension ' + extension + ' --do-not-include-pack-dependencies'
-            for extension in extensions if extension != 'teabyii.ayu'
-        ])
+        # Missing extensions are installed in a single CLI launch.
+        self.assertEqual(calls, ['--list-extensions', ' '.join(
+            '--install-extension ' + extension for extension in extensions if extension != 'teabyii.ayu'
+        ) + ' --do-not-include-pack-dependencies'])
         self.assertIn('other.existing-extension', listing.read_text())
         self.assertNotIn('ms-python.vscode-pylance', listing.read_text())
         self.assertTrue((self.home / '.config/Code/User/settings.json').is_symlink())
@@ -485,10 +488,12 @@ esac''')
         self.run_command(setup + ['--check'])
         log.write_text('')
         self.run_command(setup + ['--update'])
-        self.assertEqual(log.read_text().splitlines(), ['--list-extensions'] + [
-            '--install-extension ' + extension + ' --do-not-include-pack-dependencies --force'
-            for extension in extensions
-        ])
+        self.assertEqual(log.read_text().splitlines(), ['--list-extensions', ' '.join(
+            '--install-extension ' + extension for extension in extensions
+        ) + ' --force --do-not-include-pack-dependencies'])
+        log.write_text('')
+        self.run_command(setup)
+        self.assertEqual(log.read_text().splitlines(), ['--list-extensions'])
         self.assertNotIn('ms-python.vscode-pylance', listing.read_text())
         self.mock('code', 'exit 7')
         self.run_command(setup, code=7)
